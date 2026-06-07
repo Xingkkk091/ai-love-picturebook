@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 環保小天地</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Maru Gothic', system-ui, sans-serif;
+      min-height: 100vh;
+      background: #f0e6d2;
+      background-image:
+        radial-gradient(circle at 20% 10%, #fff8e3 0%, transparent 40%),
+        radial-gradient(circle at 80% 90%, #e8f3da 0%, transparent 40%),
+        linear-gradient(180deg, #fbf3df 0%, #efe6d0 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 60px;
+    }
+    .title {
+      font-size: clamp(1.6rem, 6vw, 2.4rem);
+      font-weight: 900;
+      color: #1a2233;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: clamp(0.85rem, 3vw, 1rem);
+      color: #4a5568;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      width: 100%;
+      max-width: 820px;
+    }
+    .card {
+      background: #fffaf0;
+      border: 3px solid #1a2233;
+      border-radius: 20px;
+      padding: 28px 24px;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 12px;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 4px 4px 0 #1a2233;
+    }
+    .card:hover, .card:focus {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 #1a2233;
+      outline: none;
+    }
+    .card:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #1a2233;
+    }
+    .icon { font-size: 3rem; line-height: 1; }
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #1a2233;
+    }
+    .card-desc {
+      font-size: 0.82rem;
+      color: #4a5568;
+      line-height: 1.6;
+    }
+    .card.green  { background: #d4ecd9; }
+    .card.sky    { background: #cbe7f0; }
+    .card.yellow { background: #fce5b0; }
+    .card.pink   { background: #fde0f0; }
+    .sleep-tag {
+      font-size: 0.72rem;
+      background: #fff3;
+      border: 1.5px solid #c97aaa;
+      color: #a0527a;
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="title">🌿 AI 環保小天地</div>
+  <div class="subtitle">點一下，開始探索吧！</div>
+  <div class="grid">
+    <a class="card green" href="AI 環保城市.html">
+      <div class="icon">🏙️</div>
+      <div class="card-title">AI 環保城市</div>
+      <div class="card-desc">說出你心目中的綠色城市</div>
+    </a>
+    <a class="card sky" href="AI 環保小教室.html">
+      <div class="icon">📚</div>
+      <div class="card-title">環保小教室</div>
+      <div class="card-desc">一起學習保護地球的知識</div>
+    </a>
+    <a class="card yellow" href="AI 愛的行動繪本.html">
+      <div class="icon">❤️</div>
+      <div class="card-title">AI 愛的行動繪本</div>
+      <div class="card-desc">把你的愛的承諾畫成一本繪本</div>
+    </a>
+    <a class="card pink" href="https://line-sticker-tool-7yuogjqh4dag8zfavnswjx.streamlit.app/" target="_blank">
+      <div class="icon">😊</div>
+      <div class="card-title">LINE 貼圖自製</div>
+      <div class="card-desc">用 AI 幫你做專屬的 LINE 貼圖！</div>
+      <div class="sleep-tag">😴 點進去空白請稍等，它在睡覺～</div>
+    </a>
+  </div>
+</body>
+</html>

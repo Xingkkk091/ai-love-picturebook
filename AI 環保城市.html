@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>AI 環保城市 · 把你心中的城市說出來</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1a2233;
+    --ink-2: #4a5568;
+    --paper: #fffaf0;
+    --paper-2: #fff3dc;
+    --leaf: #4a9d5f;
+    --leaf-light: #d4ecd9;
+    --sky: #5ab4d4;
+    --sky-light: #cbe7f0;
+    --sun: #f5b942;
+    --sun-light: #fce5b0;
+    --tomato: #e85d4f;
+    --tomato-light: #fbd7d0;
+    --hand: 'Zen Maru Gothic', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #f0e6d2; font-family: var(--hand); color: var(--ink); }
+  body {
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 10%, #fff8e3 0%, transparent 40%),
+      radial-gradient(circle at 80% 90%, #e8f3da 0%, transparent 40%),
+      linear-gradient(180deg, #fbf3df 0%, #efe6d0 100%);
+  }
+
+  .stage { max-width: 1200px; margin: 0 auto; padding: 24px 28px 64px; }
+
+  /* ── Topbar ─────────────────────────────────── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px; background: var(--ink); color: var(--paper);
+    border-radius: 18px 18px 0 0; border: 3px solid var(--ink); border-bottom: none;
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 38px; height: 38px; background: var(--leaf); border-radius: 10px;
+    display: grid; place-items: center; font-size: 22px; border: 2px solid var(--paper);
+  }
+  .topbar h1 { font-size: 20px; margin: 0; font-weight: 700; }
+  .topbar .sub { font-family: var(--mono); font-size: 11px; opacity: 0.7; letter-spacing: 0.06em; }
+  .topbar .right { display: flex; gap: 10px; align-items: center; font-family: var(--mono); font-size: 11px; opacity: 0.85; }
+  .pulse { width: 8px; height: 8px; background: var(--leaf); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.4); } }
+
+  /* ── Stepper ────────────────────────────────── */
+  .stepper {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--paper); border-left: 3px solid var(--ink); border-right: 3px solid var(--ink);
+  }
+  .step {
+    padding: 16px 14px; text-align: center; cursor: pointer;
+    border-right: 2px dashed rgba(26,34,51,0.18); user-select: none;
+    transition: background 0.15s; position: relative;
+  }
+  .step:last-child { border-right: none; }
+  .step .num {
+    display: inline-block; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--paper-2); border: 2px solid var(--ink);
+    line-height: 22px; font-weight: 700; margin-bottom: 6px;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .step .name { font-size: 16px; font-weight: 700; }
+  .step .desc { font-size: 11px; color: var(--ink-2); margin-top: 2px; font-family: var(--mono); }
+  .step.active { background: var(--paper-2); }
+  .step.active .num { background: var(--leaf); color: var(--paper); }
+  .step.done .num { background: var(--ink); color: var(--paper); }
+  .step.done .num::before { content: '✓'; }
+  .step.done .num span { display: none; }
+
+  /* ── Body ───────────────────────────────────── */
+  .body {
+    background: var(--paper); border: 3px solid var(--ink); border-top: none;
+    border-radius: 0 0 18px 18px; padding: 32px; min-height: 540px;
+  }
+
+  .head { margin-bottom: 22px; padding-bottom: 16px; border-bottom: 2px dashed rgba(26,34,51,0.15); display: flex; justify-content: space-between; gap: 24px; }
+  .head h2 { font-size: 28px; margin: 0 0 6px; font-weight: 900; }
+  .head .lede { font-size: 14px; color: var(--ink-2); max-width: 540px; line-height: 1.5; }
+  .teacher-note {
+    font-family: var(--mono); font-size: 10px; background: var(--ink); color: var(--paper);
+    padding: 6px 10px; border-radius: 4px; max-width: 240px; line-height: 1.5; flex-shrink: 0;
+  }
+  .teacher-note::before { content: '老師備忘'; display: block; font-size: 9px; opacity: 0.6; letter-spacing: 0.1em; margin-bottom: 3px; }
+
+  /* ── Grid card ─────────────────────────────── */
+  .ki-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 720px) { .ki-grid { grid-template-columns: repeat(2, 1fr); } }
+  .pick {
+    padding: 16px 12px; background: var(--paper-2); border: 2px solid var(--ink);
+    border-radius: 14px; cursor: pointer; text-align: center; transition: all 0.12s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .pick:hover { transform: translate(-2px, -2px); box-shadow: 3px 3px 0 var(--ink); }
+  .pick.selected { background: var(--leaf); color: var(--paper); }
+  .pick.selected.skytone { background: var(--sky); }
+  .pick.selected.suntone { background: var(--sun); color: var(--ink); }
+  .pick.selected.rosetone { background: var(--tomato); }
+  .pick .em { font-size: 32px; line-height: 1; }
+  .pick .label { font-size: 14px; font-weight: 700; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 8px 14px; border: 2px solid var(--ink); background: var(--paper-2);
+    border-radius: 999px; font-family: var(--hand); font-size: 14px; cursor: pointer; transition: all 0.12s;
+  }
+  .chip:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--ink); }
+  .chip.selected { background: var(--ink); color: var(--paper); }
+
+  textarea {
+    width: 100%; padding: 14px; border: 2px solid var(--ink); border-radius: 12px;
+    font-family: var(--hand); font-size: 16px; background: var(--paper); resize: vertical;
+  }
+  textarea:focus { outline: none; box-shadow: 0 0 0 3px var(--leaf); }
+
+  /* ── Buttons ────────────────────────────────── */
+  .nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 32px; }
+  .btn {
+    padding: 14px 22px; border: 3px solid var(--ink); border-radius: 12px;
+    font-family: var(--hand); font-size: 16px; font-weight: 700; cursor: pointer;
+    background: var(--paper); box-shadow: 3px 3px 0 var(--ink); transition: transform 0.1s;
+  }
+  .btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: 3px 3px 0 var(--ink); }
+  .btn.primary { background: var(--leaf); color: var(--paper); }
+  .btn.big { padding: 18px 34px; font-size: 19px; }
+
+  /* ── Prompt builder ─────────────────────────── */
+  .prompt-box {
+    background: var(--paper-2); border: 2px dashed rgba(26,34,51,0.3);
+    border-radius: 14px; padding: 20px; font-size: 17px; line-height: 1.9; min-height: 80px;
+  }
+  .prompt-box .pill {
+    display: inline-block; background: var(--leaf); color: var(--paper);
+    padding: 2px 10px; border-radius: 999px; margin: 0 4px; font-weight: 700;
+  }
+  .prompt-box .pill.empty { background: var(--paper); color: var(--ink-2); border: 2px dashed var(--ink-2); padding: 1px 12px; font-style: italic; }
+  .prompt-box .pill.sky { background: var(--sky); }
+  .prompt-box .pill.sun { background: var(--sun); color: var(--ink); }
+  .prompt-box .pill.rose { background: var(--tomato); }
+  .prompt-box .pill.list { background: var(--ink); }
+
+  /* ── Result ─────────────────────────────────── */
+  .result-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; }
+  @media (max-width: 800px) { .result-grid { grid-template-columns: 1fr; } }
+  .city-frame {
+    border: 3px solid var(--ink); border-radius: 14px; overflow: hidden;
+    background: var(--paper); box-shadow: 4px 4px 0 var(--ink); aspect-ratio: 4 / 3;
+  }
+  .story-frame {
+    background: var(--paper-2); border: 2px dashed rgba(26,34,51,0.3); border-radius: 14px; padding: 22px;
+  }
+  .story-frame h3 { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--ink-2); margin: 0 0 10px; text-transform: uppercase; }
+  .story-text { font-size: 17px; line-height: 1.85; }
+  .story-text p { margin: 0 0 12px; }
+  .story-text p:first-of-type:first-letter {
+    font-size: 36px; font-weight: 900; float: left; line-height: 0.9; margin: 4px 6px 0 0; color: var(--leaf);
+  }
+
+  /* ── Thinking ───────────────────────────────── */
+  .thinking { text-align: center; padding: 60px 20px; color: var(--ink-2); }
+  .thinking-dot {
+    display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--leaf); margin: 0 4px; animation: bounce 1.2s infinite ease-in-out;
+  }
+  .thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-12px); } }
+
+  /* ── Section tags ───────────────────────────── */
+  h3.label-h {
+    font-size: 13px; font-family: var(--mono); text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--ink-2); margin: 0 0 10px;
+  }
+  h3.label-h em { font-style: normal; background: var(--leaf); color: var(--paper); padding: 1px 6px; border-radius: 3px; margin-right: 6px; }
+  .footer-tip { margin-top: 14px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--ink-2); letter-spacing: 0.1em; }
+  .footer-tip span { background: var(--ink); color: var(--paper); padding: 2px 6px; border-radius: 3px; margin: 0 4px; }
+
+  .lesson-box {
+    margin-top: 18px; padding: 14px 18px; background: var(--sun-light);
+    border: 2px solid var(--ink); border-radius: 12px; font-size: 14px; line-height: 1.6;
+  }
+  .lesson-box::before {
+    content: '💡 給小朋友的小知識'; display: block; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.08em; margin-bottom: 6px; opacity: 0.7;
+  }
+
+  .city-tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .city-tag {
+    padding: 4px 10px; background: var(--leaf-light); border: 1.5px solid var(--leaf);
+    border-radius: 999px; font-size: 12px; font-family: var(--mono);
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo } = React;
+
+const TWEAKS_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "showTeacherNote": true
+}/*EDITMODE-END*/;
+
+// ── Step 1: City type ─────────────────────────────
+const CITY_TYPES = [
+  { id: 'green', em: '🌳', label: '森林城市', tone: '' },
+  { id: 'ocean', em: '🌊', label: '海邊城市', tone: 'skytone' },
+  { id: 'sky', em: '☁️', label: '天空城市', tone: 'skytone' },
+  { id: 'desert', em: '🏜️', label: '沙漠綠洲', tone: 'suntone' },
+  { id: 'snow', em: '❄️', label: '冰雪城市', tone: 'skytone' },
+  { id: 'farm', em: '🌾', label: '農田城市', tone: 'suntone' },
+  { id: 'island', em: '🏝️', label: '小島城市', tone: 'skytone' },
+  { id: 'underground', em: '🕳️', label: '地下城市', tone: 'rosetone' },
+];
+
+// ── Step 2: Eco features ──────────────────────────
+const FEATURES = [
+  { id: 'solar', em: '☀️', label: '太陽能板', tag: '能源' },
+  { id: 'wind', em: '🌬️', label: '風力發電', tag: '能源' },
+  { id: 'tree', em: '🌳', label: '很多大樹', tag: '綠化' },
+  { id: 'recycle', em: '♻️', label: '回收工廠', tag: '回收' },
+  { id: 'bike', em: '🚲', label: '腳踏車道', tag: '交通' },
+  { id: 'animal', em: '🦋', label: '動物保護區', tag: '生態' },
+  { id: 'farm', em: '🌽', label: '城市農場', tag: '食物' },
+  { id: 'water', em: '💧', label: '雨水回收池', tag: '水資源' },
+  { id: 'rooftop', em: '🏡', label: '屋頂花園', tag: '綠化' },
+  { id: 'lab', em: '🔬', label: '環保研究所', tag: '科技' },
+  { id: 'school', em: '🏫', label: '環保小學', tag: '教育' },
+  { id: 'beach', em: '🏖️', label: '乾淨海邊', tag: '生態' },
+];
+
+// ── Step 3: Hero ─────────────────────────────────
+const HEROES = [
+  { id: 'kid', em: '👧', label: '小朋友' },
+  { id: 'turtle', em: '🐢', label: '海龜' },
+  { id: 'tree', em: '🌳', label: '會說話的樹' },
+  { id: 'robot', em: '🤖', label: '回收機器人' },
+  { id: 'cat', em: '🐱', label: '小貓咪' },
+  { id: 'bird', em: '🐦', label: '小鳥' },
+  { id: 'bee', em: '🐝', label: '小蜜蜂' },
+  { id: 'fish', em: '🐠', label: '小魚' },
+];
+
+const FEELINGS = ['開心', '勇敢', '好奇', '擔心', '感動'];
+
+// ── Helpers ──────────────────────────────────────
+function callClaude(prompt) {
+  if (!window.claude || !window.claude.complete) {
+    return Promise.resolve('（離線示範）這裡會出現 AI 寫的故事。\n\n從前從前，在一座好美好美的城市裡…');
+  }
+  return window.claude.complete(prompt);
+}
+
+function Stepper({ step, setStep, can }) {
+  const steps = [
+    { name: '想像', desc: 'IMAGINE' },
+    { name: '描述', desc: 'DESCRIBE' },
+    { name: '生成', desc: 'GENERATE' },
+    { name: '分享', desc: 'SHARE' },
+  ];
+  return (
+    <div className="stepper">
+      {steps.map((s, i) => (
+        <div
+          key={i}
+          className={`step ${step === i ? 'active' : ''} ${step > i ? 'done' : ''}`}
+          onClick={() => { if (i <= can) setStep(i); }}
+        >
+          <div className="num"><span>{i + 1}</span></div>
+          <div className="name">{s.name}</div>
+          <div className="desc">{s.desc}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TeacherNote({ show, children }) {
+  if (!show) return null;
+  return <div className="teacher-note">{children}</div>;
+}
+
+// ── Step 1 page ──────────────────────────────────
+function Step1({ city, setCity, features, toggleFeature, showNote, next }) {
+  return (
+    <>
+      <div className="head">
+        <div>
+          <h2>① 想像 · 你心中的環保城市長什麼樣？</h2>
+          <div className="lede">先選一種城市，再選你想要在裡面的東西。可以挑很多個！這些選擇等一下會變成 AI 的「指令」。</div>
+        </div>
+        <TeacherNote show={showNote}>
+          引導：「閉上眼睛 5 秒，想像未來的城市…」<br/>讓不同小朋友各選一個元素，培養共創。
+        </TeacherNote>
+      </div>
+
+      <h3 className="label-h"><em>A</em>城市類型（選一個）</h3>
+      <div className="ki-grid">
+        {CITY_TYPES.map(c => (
+          <div
+            key={c.id}
+            className={`pick ${city?.id === c.id ? 'selected' : ''} ${city?.id === c.id ? c.tone : ''}`}
+            onClick={() => setCity(c)}
+          >
+            <div className="em">{c.em}</div>
+            <div className="label">{c.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="label-h" style={{ marginTop: 28 }}><em>B</em>城市裡有什麼？（可多選 · 已選 {features.length}）</h3>
+      <div className="ki-grid">
+        {FEATURES.map(f => (
+          <div
+            key={f.id}
+            className={`pick ${features.find(x => x.id === f.id) ? 'selected' : ''}`}
+            onClick={() => toggleFeature(f)}
+            style={{ padding: '12px 8px' }}
+          >
+            <div className="em" style={{ fontSize: 26 }}>{f.em}</div>
+            <div className="label" style={{ fontSize: 13 }}>{f.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="lesson-box">
+        為什麼要選那麼多東西？因為 AI 會根據你給的「材料」來想故事 — 你給得越具體，AI 寫出來的就越接近你心裡的樣子。
+      </div>
+
+      <div className="nav">
+        <span />
+        <button className="btn primary big" disabled={!city || features.length === 0} onClick={next}>
+          下一步 → 描述
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Step 2 page ──────────────────────────────────
+function Step2({ city, features, hero, setHero, feeling, setFeeling, wish, setWish, prompt, showNote, prev, next }) {
+  return (
+    <>
+      <div className="head">
+        <div>
+          <h2>② 描述 · 給 AI 一個清楚的指令</h2>
+          <div className="lede">幫故事選一個主角和心情，再用一句話加進你的願望。底下會即時組成「Prompt」 — 給 AI 看的話。</div>
+        </div>
+        <TeacherNote show={showNote}>
+          重點教學：「<strong>Prompt</strong>」就是你跟 AI 說的話。說得越清楚，AI 越能幫到你。
+        </TeacherNote>
+      </div>
+
+      <h3 className="label-h"><em>C</em>故事主角</h3>
+      <div className="chip-row" style={{ marginBottom: 20 }}>
+        {HEROES.map(h => (
+          <button key={h.id} className={`chip ${hero?.id === h.id ? 'selected' : ''}`} onClick={() => setHero(h)}>
+            <span style={{ fontSize: 18, marginRight: 4 }}>{h.em}</span>{h.label}
+          </button>
+        ))}
+      </div>
+
+      <h3 className="label-h"><em>D</em>主角的心情</h3>
+      <div className="chip-row" style={{ marginBottom: 20 }}>
+        {FEELINGS.map(f => (
+          <button key={f} className={`chip ${feeling === f ? 'selected' : ''}`} onClick={() => setFeeling(f)}>
+            {f}
+          </button>
+        ))}
+      </div>
+
+      <h3 className="label-h"><em>E</em>你最想在這個城市裡做什麼？（一句話）</h3>
+      <textarea
+        rows={2}
+        placeholder="例如：跟海龜一起在乾淨的海裡游泳…"
+        value={wish}
+        onChange={e => setWish(e.target.value)}
+      />
+
+      <h3 className="label-h" style={{ marginTop: 24 }}><em>F</em>給 AI 的指令（自動組合）</h3>
+      <div className="prompt-box">
+        我想要一個關於
+        <span className={`pill ${city?.id === 'ocean' || city?.id === 'sky' || city?.id === 'snow' ? 'sky' : city?.id === 'desert' || city?.id === 'farm' ? 'sun' : ''}`}>
+          {city?.label || '？？？'}
+        </span>
+        的故事。城市裡有
+        {features.length > 0
+          ? features.map((f, i) => (
+              <span key={f.id} className="pill list">{f.em} {f.label}</span>
+            ))
+          : <span className="pill empty">還沒選</span>
+        }
+        。主角是
+        <span className="pill rose">{hero ? `${hero.em} ${hero.label}` : '？？？'}</span>
+        ，他的心情是
+        <span className="pill sun">{feeling || '？？？'}</span>
+        。
+        {wish ? <> 他最想<span className="pill">「{wish}」</span>。</> : null}
+      </div>
+
+      <div className="lesson-box">
+        看到了嗎？你選的每一個選項都變成了 AI 看得懂的「指令」。AI 沒有眼睛、沒有嘴巴 — 它只會看你寫的字，所以越具體越好。
+      </div>
+
+      <div className="nav">
+        <button className="btn" onClick={prev}>← 回去想像</button>
+        <button className="btn primary big" disabled={!hero || !feeling} onClick={next}>
+          下一步 → 讓 AI 生成 ✨
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Step 3 page ──────────────────────────────────
+function CityArt({ city, features }) {
+  // Composite SVG city based on selected elements
+  const palette = useMemo(() => {
+    const map = {
+      green: ['#d4ecd9', '#4a9d5f', '#2f7a44', '#fce5b0'],
+      ocean: ['#cbe7f0', '#5ab4d4', '#2e7a98', '#fce5b0'],
+      sky: ['#e6f0fa', '#a8c8e8', '#5ab4d4', '#fff'],
+      desert: ['#fce5b0', '#f5b942', '#d49930', '#4a9d5f'],
+      snow: ['#eef5fa', '#cbe7f0', '#5ab4d4', '#fff'],
+      farm: ['#f6e8b5', '#d4c870', '#8a9c3a', '#fff'],
+      island: ['#cbe7f0', '#5ab4d4', '#4a9d5f', '#f5b942'],
+      underground: ['#3a3045', '#7a6090', '#b89adc', '#f5b942'],
+    };
+    return map[city?.id] || map.green;
+  }, [city]);
+
+  const has = id => features.find(f => f.id === id);
+  return (
+    <svg viewBox="0 0 400 300" style={{ width: '100%', height: '100%' }}>
+      {/* sky */}
+      <rect width="400" height="300" fill={palette[0]} />
+      {/* sun/moon */}
+      <circle cx="320" cy="60" r="28" fill={palette[3]} opacity="0.85" />
+      {/* clouds */}
+      <ellipse cx="80" cy="50" rx="30" ry="10" fill="#fff" opacity="0.7" />
+      <ellipse cx="200" cy="40" rx="22" ry="8" fill="#fff" opacity="0.55" />
+      {/* far hills */}
+      <path d="M 0 200 Q 100 170 200 195 T 400 185 L 400 300 L 0 300 Z" fill={palette[1]} opacity="0.7" />
+      <path d="M 0 235 Q 130 215 260 230 T 400 225 L 400 300 L 0 300 Z" fill={palette[2]} opacity="0.7" />
+      {/* buildings */}
+      <rect x="40" y="170" width="40" height="80" fill={palette[2]} />
+      <rect x="86" y="150" width="34" height="100" fill={palette[1]} />
+      <rect x="126" y="180" width="48" height="70" fill={palette[2]} opacity="0.85" />
+      <rect x="248" y="160" width="30" height="90" fill={palette[1]} />
+      <rect x="284" y="180" width="44" height="70" fill={palette[2]} opacity="0.85" />
+      {/* solar on building */}
+      {has('solar') ? <g>
+        <rect x="86" y="142" width="34" height="8" fill={palette[3]} stroke="#1a2233" />
+        <line x1="94" y1="142" x2="94" y2="150" stroke="#1a2233" />
+        <line x1="103" y1="142" x2="103" y2="150" stroke="#1a2233" />
+        <line x1="112" y1="142" x2="112" y2="150" stroke="#1a2233" />
+      </g> : null}
+      {/* wind turbine */}
+      {has('wind') ? <g>
+        <line x1="370" y1="150" x2="370" y2="220" stroke="#1a2233" strokeWidth="2" />
+        <circle cx="370" cy="150" r="3" fill="#1a2233" />
+        <line x1="370" y1="150" x2="356" y2="138" stroke="#1a2233" strokeWidth="2" />
+        <line x1="370" y1="150" x2="384" y2="138" stroke="#1a2233" strokeWidth="2" />
+        <line x1="370" y1="150" x2="370" y2="135" stroke="#1a2233" strokeWidth="2" />
+      </g> : null}
+      {/* trees */}
+      {has('tree') || has('rooftop') ? <g>
+        <circle cx="20" cy="225" r="14" fill={palette[2]} />
+        <rect x="18" y="235" width="4" height="14" fill="#5a3520" />
+        <circle cx="220" cy="230" r="12" fill={palette[2]} />
+        <rect x="218" y="240" width="4" height="10" fill="#5a3520" />
+        <circle cx="350" cy="232" r="11" fill={palette[2]} />
+        <rect x="348" y="242" width="4" height="10" fill="#5a3520" />
+      </g> : null}
+      {/* rooftop garden */}
+      {has('rooftop') ? <g>
+        <rect x="248" y="155" width="30" height="6" fill={palette[1]} />
+        <circle cx="254" cy="153" r="3" fill={palette[2]} />
+        <circle cx="263" cy="153" r="3" fill={palette[2]} />
+        <circle cx="272" cy="153" r="3" fill={palette[2]} />
+      </g> : null}
+      {/* recycle bin */}
+      {has('recycle') ? <g transform="translate(180 240)">
+        <rect x="0" y="0" width="14" height="20" fill={palette[2]} stroke="#1a2233" />
+        <text x="7" y="14" textAnchor="middle" fontSize="10" fill="#fff">♻</text>
+      </g> : null}
+      {/* bike path */}
+      {has('bike') ? <g>
+        <line x1="0" y1="278" x2="400" y2="278" stroke="#1a2233" strokeDasharray="6 4" strokeWidth="1.5" />
+        <circle cx="160" cy="276" r="4" fill="none" stroke="#1a2233" strokeWidth="1.5" />
+        <circle cx="172" cy="276" r="4" fill="none" stroke="#1a2233" strokeWidth="1.5" />
+      </g> : null}
+      {/* animal / butterfly */}
+      {has('animal') ? <g transform="translate(120 100)">
+        <ellipse cx="-4" cy="0" rx="5" ry="3" fill={palette[3]} stroke="#1a2233" strokeWidth="0.8" />
+        <ellipse cx="4" cy="0" rx="5" ry="3" fill={palette[3]} stroke="#1a2233" strokeWidth="0.8" />
+      </g> : null}
+      {/* farm */}
+      {has('farm') ? <g>
+        <rect x="180" y="255" width="40" height="20" fill={palette[3]} opacity="0.6" />
+        <line x1="186" y1="255" x2="186" y2="275" stroke="#1a2233" strokeWidth="0.8" />
+        <line x1="194" y1="255" x2="194" y2="275" stroke="#1a2233" strokeWidth="0.8" />
+        <line x1="202" y1="255" x2="202" y2="275" stroke="#1a2233" strokeWidth="0.8" />
+        <line x1="210" y1="255" x2="210" y2="275" stroke="#1a2233" strokeWidth="0.8" />
+      </g> : null}
+      {/* water */}
+      {has('water') ? <g>
+        <circle cx="240" cy="265" r="2" fill={palette[1]} opacity="0.8" />
+        <circle cx="246" cy="270" r="2" fill={palette[1]} opacity="0.8" />
+        <circle cx="234" cy="270" r="2" fill={palette[1]} opacity="0.8" />
+      </g> : null}
+      {/* beach */}
+      {has('beach') ? <path d="M 0 280 Q 80 270 160 280 L 160 300 L 0 300 Z" fill={palette[3]} opacity="0.8" /> : null}
+      {/* school */}
+      {has('school') ? <g>
+        <rect x="130" y="200" width="34" height="50" fill={palette[3]} opacity="0.8" />
+        <polygon points="128,200 147,188 166,200" fill={palette[2]} />
+        <rect x="143" y="220" width="8" height="14" fill="#1a2233" />
+      </g> : null}
+      {/* lab */}
+      {has('lab') ? <g>
+        <rect x="290" y="220" width="20" height="30" fill={palette[3]} opacity="0.8" />
+        <circle cx="300" cy="218" r="3" fill={palette[2]} />
+      </g> : null}
+      {/* watermark */}
+      <text x="396" y="294" textAnchor="end" fontFamily="var(--mono)" fontSize="9" fill="#1a2233" opacity="0.4">
+        AI · GENERATED
+      </text>
+    </svg>
+  );
+}
+
+function Step3({ city, features, hero, feeling, wish, story, busy, generate, lessonShown, showNote, prev, next }) {
+  return (
+    <>
+      <div className="head">
+        <div>
+          <h2>③ 生成 · AI 把你的城市畫出來、寫出來</h2>
+          <div className="lede">按下按鈕，AI 會根據你的指令生出一張城市的樣子和一段小故事。等等仔細看 — AI 是「想出來」的，不是查資料的喔！</div>
+        </div>
+        <TeacherNote show={showNote}>
+          重點教學：<strong>「生成」</strong>= AI 自己想，不是抄 Google。每次按「重新生成」結果可能不一樣，這就是創意。
+        </TeacherNote>
+      </div>
+
+      <div className="result-grid">
+        <div>
+          <h3 className="label-h">城市畫面</h3>
+          <div className="city-frame">
+            <CityArt city={city} features={features} />
+          </div>
+          <div className="city-tag-row">
+            <span className="city-tag">{city?.em} {city?.label}</span>
+            {features.slice(0, 5).map(f => <span key={f.id} className="city-tag">{f.em} {f.label}</span>)}
+            {features.length > 5 ? <span className="city-tag">+{features.length - 5}</span> : null}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="label-h">{hero?.em} {hero?.label}的故事</h3>
+          <div className="story-frame">
+            {!story && !busy ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <button className="btn primary big" onClick={generate}>✨ 生成故事</button>
+                <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-2)' }}>
+                  按下後 AI 會花幾秒思考…
+                </div>
+              </div>
+            ) : null}
+            {busy ? (
+              <div className="thinking">
+                <span className="thinking-dot" /><span className="thinking-dot" /><span className="thinking-dot" />
+                <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 11 }}>AI 思考中…</div>
+              </div>
+            ) : null}
+            {story && !busy ? (
+              <>
+                <div className="story-text">
+                  {story.split(/\n+/).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
+                </div>
+                <button className="btn" style={{ marginTop: 12, fontSize: 13, padding: '8px 14px' }} onClick={generate}>
+                  🔄 換一個版本
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {lessonShown ? (
+        <div className="lesson-box" style={{ background: 'var(--tomato-light)' }}>
+          <strong>⚠️ 但要小心！</strong> AI 有時候會寫錯、會編東西。看到 AI 給的內容，要想一想：「這是真的嗎？」例如 AI 可能說某個動物有 5 隻腳 — 那當然是錯的。我們要當 AI 的小老師。
+        </div>
+      ) : null}
+
+      <div className="nav">
+        <button className="btn" onClick={prev}>← 回去改指令</button>
+        <button className="btn primary big" disabled={!story} onClick={next}>下一步 → 分享 →</button>
+      </div>
+    </>
+  );
+}
+
+// ── Step 4 ───────────────────────────────────────
+function Step4({ city, features, hero, feeling, wish, story, showNote, prev, restart }) {
+  return (
+    <>
+      <div className="head">
+        <div>
+          <h2>④ 分享 · 把你的環保城市帶回家</h2>
+          <div className="lede">這是只屬於你的城市。可以印出來貼在牆上，或念給家人聽。明天再來一次，AI 會生出不一樣的城市。</div>
+        </div>
+        <TeacherNote show={showNote}>
+          收尾活動：請 2-3 位小朋友上台，分享他們的城市。問他們：「為什麼選這些？」、「你希望真的有這座城市嗎？」
+        </TeacherNote>
+      </div>
+
+      <div style={{ background: 'var(--paper-2)', border: '3px solid var(--ink)', borderRadius: 18, padding: 28, boxShadow: '5px 5px 0 var(--ink)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.6, letterSpacing: '0.1em' }}>MY ECO CITY · 我的環保城市</div>
+            <h2 style={{ margin: 0, fontSize: 26 }}>{city?.em} {city?.label} · {hero?.label}的故事</h2>
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-2)' }}>{new Date().toLocaleDateString('zh-TW')}</div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          <div className="city-frame" style={{ aspectRatio: '4/3' }}>
+            <CityArt city={city} features={features} />
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontFamily: 'var(--mono)', color: 'var(--ink-2)', marginBottom: 8 }}>城市裡有：</div>
+            <div className="city-tag-row" style={{ marginBottom: 14 }}>
+              {features.map(f => <span key={f.id} className="city-tag">{f.em} {f.label}</span>)}
+            </div>
+            <div style={{ fontSize: 13, fontFamily: 'var(--mono)', color: 'var(--ink-2)', marginBottom: 4 }}>{hero?.em} 主角心情：{feeling}</div>
+            {wish ? <div style={{ fontSize: 14, marginBottom: 12, lineHeight: 1.5 }}>願望：「{wish}」</div> : null}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 20, padding: 18, background: 'var(--paper)', border: '2px dashed rgba(26,34,51,0.3)', borderRadius: 12 }}>
+          <div style={{ fontSize: 13, fontFamily: 'var(--mono)', color: 'var(--ink-2)', marginBottom: 8 }}>故事</div>
+          <div className="story-text" style={{ fontSize: 15 }}>
+            {story.split(/\n+/).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
+          </div>
+        </div>
+      </div>
+
+      <div className="lesson-box" style={{ marginTop: 20 }}>
+        <strong>今天學到的：</strong> ① 跟 AI 說話叫「Prompt」 ② 說得越清楚，AI 越懂 ③ AI 是「想出來」的，每次都不一樣 ④ AI 不一定都對，要當小偵探。
+      </div>
+
+      <div className="nav">
+        <button className="btn" onClick={prev}>← 看故事</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn" onClick={() => window.print()}>🖨️ 印出來</button>
+          <button className="btn primary big" onClick={restart}>🔄 再來一次</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── App ──────────────────────────────────────────
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAKS_DEFAULTS);
+  const [step, setStep] = useState(0);
+  const [city, setCity] = useState(null);
+  const [features, setFeatures] = useState([]);
+  const [hero, setHero] = useState(null);
+  const [feeling, setFeeling] = useState('開心');
+  const [wish, setWish] = useState('');
+  const [story, setStory] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [lessonShown, setLessonShown] = useState(false);
+
+  function toggleFeature(f) {
+    setFeatures(prev => prev.find(x => x.id === f.id) ? prev.filter(x => x.id !== f.id) : [...prev, f]);
+  }
+
+  async function generate() {
+    setBusy(true);
+    setStory('');
+    const featList = features.map(f => f.label).join('、');
+    const prompt = `為台灣國小低年級小朋友寫一個短篇故事。
+
+故事設定：
+- 場景：${city.label}
+- 城市裡有：${featList}
+- 主角：${hero.label}
+- 主角心情：${feeling}
+${wish ? `- 主角的願望：${wish}` : ''}
+
+寫作要求：
+- 大約 130-170 字
+- 分成 3-4 段（每段 1-2 句話，段落之間用空行分開）
+- 用簡單的詞，畫面感要強
+- 故事要溫暖正面，最後讓小朋友感受到希望
+- 直接寫故事，不要加標題或前綴`;
+    try {
+      const text = await callClaude(prompt);
+      setStory(text);
+      setLessonShown(true);
+    } catch (e) {
+      setStory('AI 故事工廠暫時休息了，等一下再試試！\n\n你可以先看看左邊的城市，想想自己會怎麼說這個故事 — 那就是你比 AI 厲害的地方喔！');
+    }
+    setBusy(false);
+  }
+
+  function restart() {
+    setStep(0);
+    setCity(null); setFeatures([]); setHero(null); setFeeling('開心');
+    setWish(''); setStory(''); setLessonShown(false);
+  }
+
+  // determine furthest step user can go
+  const canStep = useMemo(() => {
+    if (step === 0 && (!city || features.length === 0)) return 0;
+    if (!hero || !feeling) return 1;
+    if (!story) return 2;
+    return 3;
+  }, [city, features, hero, feeling, story, step]);
+
+  return (
+    <div className="stage">
+      <div className="topbar">
+        <div className="brand">
+          <div className="brand-mark">🏙️</div>
+          <div>
+            <h1>AI 環保城市</h1>
+            <div className="sub">PROMPT · GENERATE · LEARN</div>
+          </div>
+        </div>
+        <div className="right">
+          <div className="pulse" />
+          <span>AI 已連線　|　今日學習：用 AI 創造城市</span>
+        </div>
+      </div>
+
+      <Stepper step={step} setStep={setStep} can={canStep} />
+
+      <div className="body" data-screen-label={`Step ${step + 1}`}>
+        {step === 0 && <Step1 city={city} setCity={setCity} features={features} toggleFeature={toggleFeature} showNote={tweaks.showTeacherNote} next={() => setStep(1)} />}
+        {step === 1 && <Step2 city={city} features={features} hero={hero} setHero={setHero} feeling={feeling} setFeeling={setFeeling} wish={wish} setWish={setWish} showNote={tweaks.showTeacherNote} prev={() => setStep(0)} next={() => setStep(2)} />}
+        {step === 2 && <Step3 city={city} features={features} hero={hero} feeling={feeling} wish={wish} story={story} busy={busy} generate={generate} lessonShown={lessonShown} showNote={tweaks.showTeacherNote} prev={() => setStep(1)} next={() => setStep(3)} />}
+        {step === 3 && <Step4 city={city} features={features} hero={hero} feeling={feeling} wish={wish} story={story} showNote={tweaks.showTeacherNote} prev={() => setStep(2)} restart={restart} />}
+      </div>
+
+      <div className="footer-tip">
+        <span>FLOW</span>
+        想像 → 描述（學 Prompt）→ 生成（AI 做事）→ 分享（思考 + 評估）
+      </div>
+
+      <TweaksPanel title="Tweaks" defaultOpen={false}>
+        <TweakSection title="顯示">
+          <TweakToggle
+            label="顯示老師備忘"
+            checked={tweaks.showTeacherNote}
+            onChange={v => setTweak('showTeacherNote', v)}
+          />
+        </TweakSection>
+        <TweakSection title="跳到步驟">
+          <TweakButton onClick={() => setStep(0)}>① 想像</TweakButton>
+          <TweakButton onClick={() => setStep(1)}>② 描述（Prompt）</TweakButton>
+          <TweakButton onClick={() => setStep(2)}>③ 生成</TweakButton>
+          <TweakButton onClick={() => setStep(3)}>④ 分享</TweakButton>
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

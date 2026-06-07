@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>環保小教室 — AI 互動原型</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1a2233;
+    --ink-2: #4a5568;
+    --paper: #fffaf0;
+    --paper-2: #fff3dc;
+    --leaf: #4a9d5f;
+    --leaf-dark: #2f7a44;
+    --leaf-light: #d4ecd9;
+    --sky: #5ab4d4;
+    --sky-light: #cbe7f0;
+    --sun: #f5b942;
+    --sun-light: #fce5b0;
+    --tomato: #e85d4f;
+    --tomato-light: #fbd7d0;
+    --hand: 'Zen Maru Gothic', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #f0e6d2; font-family: var(--hand); color: var(--ink); }
+  body {
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 10%, #fff8e3 0%, transparent 40%),
+      radial-gradient(circle at 80% 90%, #e8f3da 0%, transparent 40%),
+      linear-gradient(180deg, #fbf3df 0%, #efe6d0 100%);
+  }
+
+  .stage {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 32px 64px;
+  }
+
+  /* ── Header / chrome ───────────────────────────────────────── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 18px 18px 0 0;
+    border: 3px solid var(--ink);
+    border-bottom: none;
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 12px; }
+  .topbar .brand-mark {
+    width: 38px; height: 38px;
+    background: var(--leaf);
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    border: 2px solid var(--paper);
+  }
+  .topbar h1 { font-size: 20px; margin: 0; font-weight: 700; }
+  .topbar .sub { font-family: var(--mono); font-size: 11px; opacity: 0.7; letter-spacing: 0.06em; }
+  .topbar .right { display: flex; gap: 10px; align-items: center; font-family: var(--mono); font-size: 11px; opacity: 0.85; }
+  .pulse { width: 8px; height: 8px; background: var(--leaf); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.4); } }
+
+  /* ── Tab bar ───────────────────────────────────────────────── */
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--paper);
+    border-left: 3px solid var(--ink);
+    border-right: 3px solid var(--ink);
+  }
+  .tab {
+    padding: 18px 14px;
+    text-align: center;
+    cursor: pointer;
+    border-right: 2px dashed rgba(26,34,51,0.18);
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .tab:last-child { border-right: none; }
+  .tab .icon { font-size: 28px; line-height: 1; margin-bottom: 6px; }
+  .tab .name { font-size: 16px; font-weight: 700; }
+  .tab .desc { font-size: 11px; color: var(--ink-2); margin-top: 3px; font-family: var(--mono); }
+  .tab:hover { background: rgba(0,0,0,0.03); }
+  .tab.active {
+    background: var(--paper-2);
+    box-shadow: inset 0 -4px 0 var(--accent, var(--leaf));
+  }
+  .tab[data-color="leaf"].active { box-shadow: inset 0 -4px 0 var(--leaf); }
+  .tab[data-color="sky"].active { box-shadow: inset 0 -4px 0 var(--sky); }
+  .tab[data-color="tomato"].active { box-shadow: inset 0 -4px 0 var(--tomato); }
+  .tab[data-color="sun"].active { box-shadow: inset 0 -4px 0 var(--sun); }
+
+  /* ── Tool body ─────────────────────────────────────────────── */
+  .tool {
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-top: none;
+    border-radius: 0 0 18px 18px;
+    padding: 32px;
+    min-height: 480px;
+  }
+  .tool-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 2px dashed rgba(26,34,51,0.15);
+  }
+  .tool-head h2 { font-size: 28px; margin: 0 0 6px; font-weight: 900; }
+  .tool-head .lede { font-size: 14px; color: var(--ink-2); max-width: 520px; line-height: 1.5; }
+  .teacher-note {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 6px 10px;
+    border-radius: 4px;
+    max-width: 240px;
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+  .teacher-note::before {
+    content: '老師備忘';
+    display: block;
+    font-size: 9px;
+    opacity: 0.6;
+    letter-spacing: 0.1em;
+    margin-bottom: 3px;
+  }
+
+  .tool-body { display: grid; grid-template-columns: 380px 1fr; gap: 28px; }
+  @media (max-width: 900px) { .tool-body { grid-template-columns: 1fr; } }
+
+  /* ── Input column ─────────────────────────────────────────── */
+  .input-col h3 {
+    font-size: 13px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+    margin: 0 0 10px;
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip {
+    padding: 8px 12px;
+    border: 2px solid var(--ink);
+    background: var(--paper-2);
+    border-radius: 999px;
+    font-family: var(--hand);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--ink); }
+  .chip.selected { background: var(--accent, var(--leaf)); color: var(--paper); }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    font-family: var(--hand);
+    font-size: 15px;
+    background: var(--paper);
+    resize: vertical;
+  }
+  textarea:focus, input:focus { outline: none; box-shadow: 0 0 0 3px var(--accent, var(--leaf)); }
+
+  .big-btn {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--accent, var(--leaf));
+    color: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    font-family: var(--hand);
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: transform 0.1s;
+  }
+  .big-btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+  .big-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+  .big-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 3px 3px 0 var(--ink); }
+
+  /* ── Output column ─────────────────────────────────────────── */
+  .output-col {
+    background: var(--paper-2);
+    border: 2px dashed rgba(26,34,51,0.25);
+    border-radius: 14px;
+    padding: 22px;
+    min-height: 360px;
+    position: relative;
+  }
+  .output-col .placeholder {
+    color: var(--ink-2);
+    font-size: 14px;
+    text-align: center;
+    padding: 60px 20px;
+    font-family: var(--mono);
+  }
+  .output-col h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+
+  .ai-bubble {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 16px;
+    line-height: 1.65;
+    box-shadow: 2px 2px 0 var(--ink);
+    white-space: pre-wrap;
+  }
+  .ai-bubble.kid {
+    background: var(--accent, var(--leaf));
+    color: var(--paper);
+    margin-bottom: 12px;
+  }
+  .ai-bubble.assistant::before {
+    content: '🌱 AI 老師';
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    margin-bottom: 6px;
+    opacity: 0.6;
+    letter-spacing: 0.1em;
+  }
+  .ai-bubble.kid::before {
+    content: '👦 小朋友';
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    margin-bottom: 6px;
+    opacity: 0.8;
+    letter-spacing: 0.1em;
+  }
+  .loading-dots span { display: inline-block; animation: blink 1.4s infinite both; }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.2 } 40% { opacity: 1 } }
+
+  /* Image preview frame */
+  .img-preview {
+    aspect-ratio: 4 / 3;
+    background:
+      repeating-linear-gradient(45deg, rgba(0,0,0,0.04), rgba(0,0,0,0.04) 8px, transparent 8px, transparent 16px),
+      var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .img-preview .ph-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-2);
+    text-align: center;
+    padding: 18px;
+  }
+  .img-preview svg { width: 100%; height: 100%; }
+
+  /* Bin verdict cards */
+  .bin-card {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    box-shadow: 2px 2px 0 var(--ink);
+    margin-bottom: 10px;
+  }
+  .bin-card .bin-icon {
+    width: 60px; height: 60px;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 28px;
+    border: 2px solid var(--ink);
+    flex-shrink: 0;
+  }
+  .bin-card .bin-info .label { font-weight: 700; font-size: 17px; margin-bottom: 2px; }
+  .bin-card .bin-info .reason { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+
+  /* Footer / mode line */
+  .footer {
+    margin-top: 14px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-2);
+    letter-spacing: 0.1em;
+  }
+  .footer span { background: var(--ink); color: var(--paper); padding: 2px 6px; border-radius: 3px; margin: 0 4px; }
+
+  /* Tab-specific accent variable */
+  .tool[data-color="leaf"] { --accent: var(--leaf); }
+  .tool[data-color="sky"] { --accent: var(--sky); }
+  .tool[data-color="tomato"] { --accent: var(--tomato); }
+  .tool[data-color="sun"] { --accent: var(--sun); }
+
+  .ki-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+  /* Spinner */
+  .thinking {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--ink-2);
+  }
+  .thinking-dot {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent, var(--leaf));
+    margin: 0 4px;
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-12px); } }
+
+  .quick-questions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .quick-questions button {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    font-family: var(--hand);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .quick-questions button:hover {
+    background: var(--accent, var(--leaf));
+    color: var(--paper);
+    transform: translateX(2px);
+  }
+
+  .story-output { font-size: 16px; line-height: 1.85; }
+  .story-output p { margin: 0 0 12px; }
+  .story-output p:first-letter {
+    font-size: 32px;
+    font-weight: 900;
+    float: left;
+    line-height: 0.9;
+    margin-right: 6px;
+    color: var(--accent, var(--leaf));
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+const TWEAKS_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "showTeacherNote": true,
+  "fontSize": 16
+}/*EDITMODE-END*/;
+
+// ── Tools registry ────────────────────────────────────────────
+const TOOLS = [
+  { id: 'classify', name: '垃圾偵探', icon: '📷', desc: 'Photo · Classify', color: 'leaf',
+    title: '垃圾偵探 · AI 幫你看這要丟哪一桶',
+    lede: '小朋友選一個物品（或拍照），AI 會告訴你該丟哪一桶，還會解釋為什麼。',
+    teacherNote: '示範時請選一個小朋友答錯過的物品，例如「便當盒」或「飲料杯」，比較有教育意義。' },
+  { id: 'ask', name: '環保小博士', icon: '🎤', desc: 'Voice · Q&A', color: 'sky',
+    title: '環保小博士 · 想問什麼就問什麼',
+    lede: '小朋友提出環保的問題（按麥克風或選一個建議題），AI 用小朋友懂的話回答。',
+    teacherNote: '可以先讓全班一起想問題，再請一位上來「按麥克風」。鼓勵異想天開的問題。' },
+  { id: 'imagine', name: '想像地球', icon: '🎨', desc: 'Text · Image', color: 'sun',
+    title: '想像地球 · 畫出你心目中的環保未來',
+    lede: '小朋友描述一個畫面，AI 把它畫出來。用視覺讓抽象的「永續」變得具體。',
+    teacherNote: '若 AI 畫得不像也沒關係 — 重點是讓小朋友練習「描述細節」與「想像未來」。' },
+  { id: 'story', name: '故事工廠', icon: '📖', desc: 'Story · Generator', color: 'tomato',
+    title: '故事工廠 · 一秒生出環保故事',
+    lede: '選一個主角和一個情境，AI 寫一段適合小朋友聽的環保故事。',
+    teacherNote: '可以用此功能當作每堂課的暖身。產生後讓不同小朋友輪流朗讀一段。' },
+];
+
+// ── Common helpers ─────────────────────────────────────────────
+function callClaude(prompt) {
+  if (!window.claude || !window.claude.complete) {
+    return Promise.resolve('（離線示範模式）這裡會出現 AI 的回答～');
+  }
+  return window.claude.complete(prompt);
+}
+
+function ToolHead({ tool, showNote }) {
+  return (
+    <div className="tool-head">
+      <div>
+        <h2>{tool.title}</h2>
+        <div className="lede">{tool.lede}</div>
+      </div>
+      {showNote ? <div className="teacher-note">{tool.teacherNote}</div> : null}
+    </div>
+  );
+}
+
+function Thinking() {
+  return (
+    <div className="thinking">
+      <span className="thinking-dot" /><span className="thinking-dot" /><span className="thinking-dot" />
+      <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 11 }}>AI 思考中…</div>
+    </div>
+  );
+}
+
+// ── Tool 1: Classifier ─────────────────────────────────────────
+const ITEMS = [
+  { name: '寶特瓶', icon: '🥤', glyph: 'bottle' },
+  { name: '便當盒', icon: '🍱', glyph: 'lunchbox' },
+  { name: '報紙', icon: '📰', glyph: 'paper' },
+  { name: '鋁箔包', icon: '🧃', glyph: 'tetrapak' },
+  { name: '香蕉皮', icon: '🍌', glyph: 'banana' },
+  { name: '電池', icon: '🔋', glyph: 'battery' },
+  { name: '泡麵碗', icon: '🍜', glyph: 'noodle' },
+  { name: '玻璃瓶', icon: '🍾', glyph: 'glass' },
+];
+
+function ItemPreview({ item }) {
+  if (!item) {
+    return <div className="ph-text">[ 點選左邊一個物品<br/>或拍照 ]</div>;
+  }
+  return (
+    <div style={{ textAlign: 'center', padding: 30 }}>
+      <div style={{ fontSize: 110, lineHeight: 1, marginBottom: 12 }}>{item.icon}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-2)' }}>
+        IMG_001.jpg · {item.name}
+      </div>
+    </div>
+  );
+}
+
+function ClassifyTool({ showNote }) {
+  const [item, setItem] = useState(null);
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function classify() {
+    if (!item) return;
+    setBusy(true);
+    setResult(null);
+    const prompt = `你是一個給台灣小朋友（國小低年級）的環保 AI 助手。物品：「${item.name}」。
+
+請用兩句話以內的非常簡短文字告訴小朋友：
+1. 這個應該丟哪個分類（從這幾類中選一個：紙類回收、塑膠回收、鐵鋁回收、玻璃回收、廚餘、一般垃圾、有害／電池）
+2. 為什麼，用一句話解釋（要用小朋友懂的話）
+
+格式（嚴格遵守，不要加其他文字）：
+分類：xxx
+原因：xxx`;
+    try {
+      const text = await callClaude(prompt);
+      const lines = text.split('\n').filter(Boolean);
+      const cat = (lines.find(l => l.includes('分類')) || '').replace(/^[^：:]*[:：]\s*/, '');
+      const why = (lines.find(l => l.includes('原因')) || '').replace(/^[^：:]*[:：]\s*/, '');
+      setResult({ cat: cat || '一般垃圾', why: why || text });
+    } catch (e) {
+      setResult({ cat: '出錯了', why: '網路或服務暫時有點問題，再試一次！' });
+    }
+    setBusy(false);
+  }
+
+  const tool = TOOLS[0];
+  return (
+    <>
+      <ToolHead tool={tool} showNote={showNote} />
+      <div className="tool-body">
+        <div className="input-col">
+          <h3>① 選一個物品</h3>
+          <div className="ki-grid">
+            {ITEMS.map(it => (
+              <button
+                key={it.name}
+                className={`chip ${item?.name === it.name ? 'selected' : ''}`}
+                onClick={() => setItem(it)}
+                style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+              >
+                <span style={{ fontSize: 18, marginRight: 6 }}>{it.icon}</span>{it.name}
+              </button>
+            ))}
+          </div>
+          <button className="big-btn" disabled={!item || busy} onClick={classify}>
+            {busy ? '辨識中…' : '🔍  讓 AI 看看'}
+          </button>
+        </div>
+
+        <div className="output-col">
+          <h3>AI 辨識結果</h3>
+          <div className="img-preview" style={{ marginBottom: 16 }}>
+            <ItemPreview item={item} />
+          </div>
+          {busy ? <Thinking /> : null}
+          {result && !busy ? (
+            <div className="bin-card">
+              <div className="bin-icon" style={{ background: 'var(--accent)' }}>🗑️</div>
+              <div className="bin-info">
+                <div className="label">{result.cat}</div>
+                <div className="reason">{result.why}</div>
+              </div>
+            </div>
+          ) : null}
+          {!result && !busy ? <div className="placeholder">選好物品後，按下「讓 AI 看看」</div> : null}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Tool 2: Ask ────────────────────────────────────────────────
+const SAMPLE_QS = [
+  '為什麼垃圾要分類呢？',
+  '海龜為什麼會吃到塑膠袋？',
+  '回收的瓶子最後會變成什麼？',
+  '電池為什麼不能丟一般垃圾？',
+  '一棵樹可以幫地球做什麼？',
+];
+
+function AskTool({ showNote }) {
+  const [question, setQuestion] = useState('');
+  const [conversation, setConversation] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const tool = TOOLS[1];
+
+  async function ask(q) {
+    if (!q.trim() || busy) return;
+    setBusy(true);
+    setConversation(c => [...c, { role: 'kid', text: q }]);
+    setQuestion('');
+    const prompt = `你是給台灣國小小朋友的環保 AI 老師「小博士」。小朋友問：「${q}」
+
+請用 2-3 句話回答。要求：
+- 用國小低年級的小朋友能聽懂的詞
+- 親切、活潑，可以用比喻
+- 結尾鼓勵小朋友動手做一件事
+- 不要超過 80 字
+- 直接回答，不要加任何前綴或符號`;
+    try {
+      const ans = await callClaude(prompt);
+      setConversation(c => [...c, { role: 'ai', text: ans }]);
+    } catch (e) {
+      setConversation(c => [...c, { role: 'ai', text: '哎呀，小博士有點累，等一下再問問看！' }]);
+    }
+    setBusy(false);
+  }
+
+  return (
+    <>
+      <ToolHead tool={tool} showNote={showNote} />
+      <div className="tool-body">
+        <div className="input-col">
+          <h3>① 點一個問題，或自己打</h3>
+          <div className="quick-questions">
+            {SAMPLE_QS.map(q => (
+              <button key={q} disabled={busy} onClick={() => ask(q)}>{q}</button>
+            ))}
+          </div>
+          <h3 style={{ marginTop: 22 }}>或自己問</h3>
+          <textarea
+            rows={3}
+            placeholder="在這裡打一個問題…"
+            value={question}
+            onChange={e => setQuestion(e.target.value)}
+            disabled={busy}
+          />
+          <button className="big-btn" disabled={!question.trim() || busy} onClick={() => ask(question)}>
+            {busy ? '小博士想想…' : '🎤  問小博士'}
+          </button>
+        </div>
+
+        <div className="output-col">
+          <h3>對話</h3>
+          {conversation.length === 0 && !busy ? (
+            <div className="placeholder">點選左邊建議題，<br/>或打字問小博士</div>
+          ) : null}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {conversation.map((m, i) => (
+              <div key={i} className={`ai-bubble ${m.role === 'kid' ? 'kid' : 'assistant'}`}>
+                {m.text}
+              </div>
+            ))}
+            {busy ? <Thinking /> : null}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Tool 3: Imagine ────────────────────────────────────────────
+const IMAGINE_STARTERS = [
+  '一個沒有垃圾的乾淨海洋，海龜在游泳',
+  '城市裡每棟樓上面都有花園',
+  '小朋友在森林裡跟動物一起野餐',
+  '回收工廠像一個五彩魔法城堡',
+];
+
+function ImaginedScene({ description, palette }) {
+  // decorative SVG placeholder that incorporates the description
+  const colors = {
+    leaf: ['#d4ecd9', '#4a9d5f', '#2f7a44'],
+    sky: ['#cbe7f0', '#5ab4d4', '#2e7a98'],
+    sun: ['#fce5b0', '#f5b942', '#d49930'],
+    rose: ['#fbd7d0', '#e85d4f', '#b13d31'],
+  };
+  const c = colors[palette] || colors.leaf;
+  return (
+    <svg viewBox="0 0 400 300" style={{ width: '100%', height: '100%' }}>
+      <rect width="400" height="300" fill={c[0]} />
+      <circle cx="320" cy="60" r="32" fill={c[1]} opacity="0.5" />
+      <path d="M 0 220 Q 100 200 200 215 T 400 210 L 400 300 L 0 300 Z" fill={c[1]} opacity="0.7" />
+      <path d="M 0 250 Q 120 230 240 245 T 400 240 L 400 300 L 0 300 Z" fill={c[2]} opacity="0.55" />
+      {/* abstract shapes */}
+      <circle cx="80" cy="160" r="22" fill={c[2]} opacity="0.6" />
+      <rect x="160" y="140" width="40" height="70" fill={c[2]} opacity="0.5" />
+      <circle cx="290" cy="170" r="14" fill={c[2]} opacity="0.7" />
+      <path d="M 230 200 q 18 -30 36 0" stroke={c[2]} strokeWidth="3" fill="none" />
+      <text x="200" y="155" textAnchor="middle" fontFamily="var(--mono)" fontSize="11" fill={c[2]} opacity="0.85">
+        AI 生成示意
+      </text>
+      <text x="200" y="175" textAnchor="middle" fontFamily="var(--hand)" fontSize="14" fill="var(--ink)" fontWeight="700">
+        {description.slice(0, 26)}
+      </text>
+    </svg>
+  );
+}
+
+function ImagineTool({ showNote }) {
+  const [prompt, setPrompt] = useState('');
+  const [scenes, setScenes] = useState([]);
+  const [palette, setPalette] = useState('leaf');
+  const [busy, setBusy] = useState(false);
+  const tool = TOOLS[2];
+
+  async function generate(text) {
+    const t = text || prompt;
+    if (!t.trim()) return;
+    setBusy(true);
+    // simulate generation latency
+    await new Promise(r => setTimeout(r, 1200));
+    const palettes = ['leaf', 'sky', 'sun', 'rose'];
+    const p = palettes[scenes.length % palettes.length];
+    setPalette(p);
+    setScenes(s => [{ desc: t, palette: p }, ...s].slice(0, 3));
+    setPrompt('');
+    setBusy(false);
+  }
+
+  return (
+    <>
+      <ToolHead tool={tool} showNote={showNote} />
+      <div className="tool-body">
+        <div className="input-col">
+          <h3>① 描述一個畫面</h3>
+          <div className="quick-questions">
+            {IMAGINE_STARTERS.map(s => (
+              <button key={s} disabled={busy} onClick={() => generate(s)}>{s}</button>
+            ))}
+          </div>
+          <h3 style={{ marginTop: 22 }}>或自己想</h3>
+          <textarea
+            rows={3}
+            placeholder="例如：森林裡有一棵會說話的大樹…"
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            disabled={busy}
+          />
+          <button className="big-btn" disabled={!prompt.trim() || busy} onClick={() => generate()}>
+            {busy ? '畫畫中…' : '🎨  生成畫面'}
+          </button>
+        </div>
+
+        <div className="output-col">
+          <h3>AI 生成畫面</h3>
+          {scenes.length === 0 && !busy ? (
+            <div className="img-preview">
+              <div className="ph-text">[ 還沒有畫面<br/>選一個建議或自己描述 ]</div>
+            </div>
+          ) : null}
+          {busy ? (
+            <div className="img-preview">
+              <Thinking />
+            </div>
+          ) : null}
+          {scenes.map((s, i) => (
+            <div key={i} style={{ marginBottom: i === 0 ? 14 : 8 }}>
+              <div className="img-preview" style={{ aspectRatio: i === 0 ? '4/3' : '16/9' }}>
+                <ImaginedScene description={s.desc} palette={s.palette} />
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-2)', marginTop: 6 }}>
+                "{s.desc}"
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Tool 4: Story ──────────────────────────────────────────────
+const HEROES = [
+  { id: 'kid', name: '小朋友', icon: '👦' },
+  { id: 'turtle', name: '海龜', icon: '🐢' },
+  { id: 'tree', name: '老樹', icon: '🌳' },
+  { id: 'bottle', name: '寶特瓶', icon: '🥤' },
+  { id: 'robot', name: '回收機器人', icon: '🤖' },
+];
+const SETTINGS = [
+  { id: 'beach', name: '在海邊' },
+  { id: 'school', name: '在學校' },
+  { id: 'forest', name: '在森林' },
+  { id: 'city', name: '在城市' },
+  { id: 'future', name: '在未來' },
+];
+
+function StoryTool({ showNote }) {
+  const [hero, setHero] = useState(HEROES[0]);
+  const [setting, setSetting] = useState(SETTINGS[0]);
+  const [story, setStory] = useState('');
+  const [busy, setBusy] = useState(false);
+  const tool = TOOLS[3];
+
+  async function generate() {
+    setBusy(true);
+    setStory('');
+    const prompt = `為台灣國小低年級小朋友寫一個關於環保的小故事。
+主角：${hero.name}
+場景：${setting.name}
+
+要求：
+- 大約 120-160 字
+- 分成 3 段（每段 1-2 句話）
+- 用簡單詞，活潑有畫面
+- 結尾要有一個小朋友可以做的環保小行動
+- 直接寫故事，不要加標題或前綴`;
+    try {
+      const text = await callClaude(prompt);
+      setStory(text);
+    } catch (e) {
+      setStory('故事工廠暫時休息了，等一下再試試！');
+    }
+    setBusy(false);
+  }
+
+  return (
+    <>
+      <ToolHead tool={tool} showNote={showNote} />
+      <div className="tool-body">
+        <div className="input-col">
+          <h3>① 選一個主角</h3>
+          <div className="chip-row">
+            {HEROES.map(h => (
+              <button
+                key={h.id}
+                className={`chip ${hero.id === h.id ? 'selected' : ''}`}
+                onClick={() => setHero(h)}
+              >
+                <span style={{ fontSize: 16, marginRight: 4 }}>{h.icon}</span>{h.name}
+              </button>
+            ))}
+          </div>
+          <h3 style={{ marginTop: 18 }}>② 選一個場景</h3>
+          <div className="chip-row">
+            {SETTINGS.map(s => (
+              <button
+                key={s.id}
+                className={`chip ${setting.id === s.id ? 'selected' : ''}`}
+                onClick={() => setSetting(s)}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+          <button className="big-btn" disabled={busy} onClick={generate}>
+            {busy ? '寫故事中…' : '📖  生成故事'}
+          </button>
+        </div>
+
+        <div className="output-col">
+          <h3>{hero.icon} {hero.name} {setting.name}的故事</h3>
+          {!story && !busy ? <div className="placeholder">選好主角和場景後，<br/>按「生成故事」</div> : null}
+          {busy ? <Thinking /> : null}
+          {story ? (
+            <div className="ai-bubble assistant story-output">
+              {story.split(/\n+/).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── App ────────────────────────────────────────────────────────
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAKS_DEFAULTS);
+  const [active, setActive] = useState('classify');
+
+  useEffect(() => {
+    document.body.style.fontSize = `${tweaks.fontSize}px`;
+  }, [tweaks.fontSize]);
+
+  const tool = TOOLS.find(t => t.id === active);
+
+  return (
+    <div className="stage">
+      <div className="topbar">
+        <div className="brand">
+          <div className="brand-mark">🌍</div>
+          <div>
+            <h1>環保小教室</h1>
+            <div className="sub">AI · TEACHING · ASSISTANT · v1.0</div>
+          </div>
+        </div>
+        <div className="right">
+          <div className="pulse" />
+          <span>AI 已連線　|　班級：3 年 2 班　|　{new Date().toLocaleDateString('zh-TW')}</span>
+        </div>
+      </div>
+
+      <div className="tabs">
+        {TOOLS.map(t => (
+          <div
+            key={t.id}
+            className={`tab ${active === t.id ? 'active' : ''}`}
+            data-color={t.color}
+            onClick={() => setActive(t.id)}
+            data-screen-label={`Tab · ${t.name}`}
+          >
+            <div className="icon">{t.icon}</div>
+            <div className="name">{t.name}</div>
+            <div className="desc">{t.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="tool" data-color={tool.color} data-screen-label={`Tool · ${tool.name}`}>
+        {active === 'classify' && <ClassifyTool showNote={tweaks.showTeacherNote} />}
+        {active === 'ask' && <AskTool showNote={tweaks.showTeacherNote} />}
+        {active === 'imagine' && <ImagineTool showNote={tweaks.showTeacherNote} />}
+        {active === 'story' && <StoryTool showNote={tweaks.showTeacherNote} />}
+      </div>
+
+      <div className="footer">
+        <span>TIPS</span> 老師全程操作 · 小朋友動嘴／舉手參與 · 投影到大螢幕 · 沒有手機也能玩
+      </div>
+
+      <TweaksPanel title="Tweaks" defaultOpen={false}>
+        <TweakSection title="顯示">
+          <TweakToggle
+            label="顯示老師備忘"
+            checked={tweaks.showTeacherNote}
+            onChange={v => setTweak('showTeacherNote', v)}
+          />
+          <TweakSlider
+            label="字級"
+            value={tweaks.fontSize}
+            min={14}
+            max={20}
+            step={1}
+            onChange={v => setTweak('fontSize', v)}
+          />
+        </TweakSection>
+        <TweakSection title="跳到工具">
+          {TOOLS.map(t => (
+            <TweakButton key={t.id} onClick={() => setActive(t.id)}>
+              {t.icon} {t.name}
+            </TweakButton>
+          ))}
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

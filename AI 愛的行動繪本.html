@@ -1,0 +1,1721 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>AI 愛的行動 · 把小朋友的故事畫出來</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%93%96%3C/text%3E%3C/svg%3E" />
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1a2233;
+    --ink-2: #4a5568;
+    --paper: #fffaf0;
+    --paper-2: #fff3dc;
+    --leaf: #c0394e;
+    --leaf-light: #fde0e6;
+    --sky: #5ab4d4;
+    --sky-light: #cbe7f0;
+    --sun: #f5b942;
+    --sun-light: #fce5b0;
+    --tomato: #e85d4f;
+    --tomato-light: #fbd7d0;
+    --hand: 'Zen Maru Gothic', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #f0e6d2; font-family: var(--hand); color: var(--ink); }
+  body {
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 10%, #fff8e3 0%, transparent 40%),
+      radial-gradient(circle at 80% 90%, #e8f3da 0%, transparent 40%),
+      linear-gradient(180deg, #fbf3df 0%, #efe6d0 100%);
+  }
+
+  .stage { max-width: 1200px; margin: 0 auto; padding: 24px 28px 64px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px; background: var(--ink); color: var(--paper);
+    border-radius: 18px 18px 0 0; border: 3px solid var(--ink); border-bottom: none;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark { width: 38px; height: 38px; background: var(--leaf); border-radius: 10px; display: grid; place-items: center; font-size: 22px; border: 2px solid var(--paper); }
+  .topbar h1 { font-size: 20px; margin: 0; font-weight: 700; }
+  .topbar .sub { font-family: var(--mono); font-size: 11px; opacity: 0.7; letter-spacing: 0.06em; }
+  .topbar .right { display: flex; gap: 10px; align-items: center; font-family: var(--mono); font-size: 11px; opacity: 0.85; }
+  .pulse { width: 8px; height: 8px; background: var(--leaf); border-radius: 50%; animation: pulse 2s infinite; }
+  .pulse.off { background: var(--tomato); animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.4); } }
+  .topbar .right button {
+    background: transparent; color: inherit; border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px; padding: 4px 9px; font-family: var(--mono); font-size: 11px;
+    cursor: pointer; letter-spacing: 0.04em;
+  }
+  .topbar .right button:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.6); }
+
+  .stepper { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--paper); border-left: 3px solid var(--ink); border-right: 3px solid var(--ink); }
+  .step { padding: 16px 14px; text-align: center; cursor: pointer; border-right: 2px dashed rgba(26,34,51,0.18); user-select: none; transition: background 0.15s; }
+  .step:last-child { border-right: none; }
+  .step .num { display: inline-block; width: 26px; height: 26px; border-radius: 50%; background: var(--paper-2); border: 2px solid var(--ink); line-height: 22px; font-weight: 700; margin-bottom: 6px; font-family: var(--mono); font-size: 13px; }
+  .step .name { font-size: 16px; font-weight: 700; }
+  .step .desc { font-size: 11px; color: var(--ink-2); margin-top: 2px; font-family: var(--mono); }
+  .step.active { background: var(--paper-2); }
+  .step.active .num { background: var(--leaf); color: var(--paper); }
+  .step.done .num { background: var(--ink); color: var(--paper); }
+  .step.done .num::before { content: '✓'; }
+  .step.done .num span { display: none; }
+
+  .body { background: var(--paper); border: 3px solid var(--ink); border-top: none; border-radius: 0 0 18px 18px; padding: 32px; min-height: 540px; }
+  .head { margin-bottom: 22px; padding-bottom: 16px; border-bottom: 2px dashed rgba(26,34,51,0.15); display: flex; justify-content: space-between; gap: 24px; }
+  .head h2 { font-size: 28px; margin: 0 0 6px; font-weight: 900; }
+  .head .lede { font-size: 14px; color: var(--ink-2); max-width: 540px; line-height: 1.5; }
+  .teacher-note { font-family: var(--mono); font-size: 10px; background: var(--ink); color: var(--paper); padding: 6px 10px; border-radius: 4px; max-width: 240px; line-height: 1.5; flex-shrink: 0; }
+  .teacher-note::before { content: '老師備忘'; display: block; font-size: 9px; opacity: 0.6; letter-spacing: 0.1em; margin-bottom: 3px; }
+
+  h3.label-h { font-size: 13px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2); margin: 0 0 10px; }
+  h3.label-h em { font-style: normal; background: var(--leaf); color: var(--paper); padding: 1px 6px; border-radius: 3px; margin-right: 6px; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 8px 14px; border: 2px solid var(--ink); background: var(--paper-2); border-radius: 999px; font-family: var(--hand); font-size: 14px; cursor: pointer; transition: all 0.12s; }
+  .chip:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--ink); }
+  .chip.selected { background: var(--leaf); color: var(--paper); }
+  .chip.selected.tone-rose { background: var(--tomato); }
+  .chip.selected.tone-sky { background: var(--sky); }
+  .chip.selected.tone-sun { background: var(--sun); color: var(--ink); }
+
+  textarea, input[type="text"] { width: 100%; padding: 14px; border: 2px solid var(--ink); border-radius: 12px; font-family: var(--hand); font-size: 16px; background: var(--paper); resize: vertical; }
+  textarea:focus, input:focus { outline: none; box-shadow: 0 0 0 3px var(--leaf); }
+
+  .nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 32px; }
+  .btn { padding: 14px 22px; border: 3px solid var(--ink); border-radius: 12px; font-family: var(--hand); font-size: 16px; font-weight: 700; cursor: pointer; background: var(--paper); box-shadow: 3px 3px 0 var(--ink); transition: transform 0.1s; }
+  .btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: 3px 3px 0 var(--ink); }
+  .btn.primary { background: var(--leaf); color: var(--paper); }
+  .btn.big { padding: 18px 34px; font-size: 19px; }
+
+  .lesson-box { margin-top: 18px; padding: 14px 18px; background: var(--sun-light); border: 2px solid var(--ink); border-radius: 12px; font-size: 14px; line-height: 1.6; }
+  .lesson-box::before { content: '💡 給小朋友的小知識'; display: block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; margin-bottom: 6px; opacity: 0.7; }
+  .lesson-box.warn { background: var(--tomato-light); }
+
+  .footer-tip { margin-top: 14px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--ink-2); letter-spacing: 0.1em; }
+  .footer-tip span { background: var(--ink); color: var(--paper); padding: 2px 6px; border-radius: 3px; margin: 0 4px; }
+
+  .thinking { text-align: center; padding: 60px 20px; color: var(--ink-2); }
+  .thinking-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--leaf); margin: 0 4px; animation: bounce 1.2s infinite ease-in-out; }
+  .thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-12px); } }
+
+  /* ── Step 1: story input ───────────────────── */
+  .story-tools { display: grid; grid-template-columns: 280px 1fr; gap: 24px; }
+  @media (max-width: 800px) { .story-tools { grid-template-columns: 1fr; } }
+  .seed-list { display: flex; flex-direction: column; gap: 8px; }
+  .seed-list button {
+    text-align: left; padding: 12px 14px; background: var(--paper-2); border: 2px solid var(--ink);
+    border-radius: 12px; font-family: var(--hand); font-size: 14px; cursor: pointer; line-height: 1.4;
+    transition: all 0.12s;
+  }
+  .seed-list button:hover { background: var(--leaf); color: var(--paper); transform: translateX(3px); }
+
+  .recording-area { display: flex; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+  .mic-btn {
+    width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--ink);
+    background: var(--tomato); color: var(--paper); font-size: 24px; cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink); flex-shrink: 0;
+  }
+  .mic-btn.recording { animation: pulse-mic 1.2s infinite; }
+  @keyframes pulse-mic { 0%, 100% { box-shadow: 3px 3px 0 var(--ink), 0 0 0 0 rgba(232,93,79,0.5); } 50% { box-shadow: 3px 3px 0 var(--ink), 0 0 0 14px rgba(232,93,79,0); } }
+
+  /* ── Step 2: scene cards ───────────────────── */
+  .scene-grid { display: grid; gap: 14px; }
+  .scene-card {
+    border: 2px solid var(--ink); border-radius: 14px; background: var(--paper-2);
+    padding: 18px; box-shadow: 3px 3px 0 var(--ink);
+  }
+  .scene-card .scene-no {
+    display: inline-block; background: var(--ink); color: var(--paper);
+    padding: 2px 10px; border-radius: 999px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; margin-bottom: 10px;
+  }
+  .scene-card .scene-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .scene-card .scene-text { font-size: 14px; line-height: 1.6; color: var(--ink-2); margin-bottom: 12px; }
+  .prompt-card {
+    background: var(--paper); border: 2px dashed rgba(26,34,51,0.3); border-radius: 10px;
+    padding: 12px 14px; font-family: var(--hand); font-size: 15px; line-height: 1.7; color: var(--ink); position: relative;
+  }
+  .prompt-card .copy-btn {
+    position: absolute; top: 8px; right: 8px; padding: 4px 10px; background: var(--ink); color: var(--paper);
+    border: none; border-radius: 6px; font-family: var(--mono); font-size: 11px; cursor: pointer;
+  }
+  .prompt-card .copy-btn:hover { background: var(--leaf); }
+  .prompt-card .copy-btn.copied { background: var(--leaf); }
+
+  /* ── Step 3: external AI links + image upload ── */
+  .ai-tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  @media (max-width: 800px) { .ai-tools-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .ai-tools-grid { grid-template-columns: 1fr; } }
+  .ai-tool-card {
+    padding: 16px; border: 2px solid var(--ink); border-radius: 14px; background: var(--paper-2);
+    text-align: center; box-shadow: 3px 3px 0 var(--ink); display: flex; flex-direction: column; gap: 8px; align-items: center;
+  }
+  .ai-tool-card .tool-icon { font-size: 32px; line-height: 1; }
+  .ai-tool-card .tool-name { font-size: 16px; font-weight: 700; }
+  .ai-tool-card .tool-desc { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+  .ai-tool-card a {
+    margin-top: 6px; padding: 8px 14px; background: var(--ink); color: var(--paper);
+    border-radius: 999px; font-size: 12px; font-family: var(--mono); text-decoration: none; letter-spacing: 0.06em;
+  }
+  .ai-tool-card a:hover { background: var(--leaf); }
+
+  .upload-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .upload-row { grid-template-columns: 1fr; } }
+  .upload-cell {
+    border: 2px dashed rgba(26,34,51,0.4); border-radius: 14px; padding: 14px; background: var(--paper-2);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .upload-cell .scene-no { display: inline-block; background: var(--ink); color: var(--paper); padding: 2px 10px; border-radius: 999px; font-family: var(--mono); font-size: 11px; align-self: flex-start; }
+  .upload-zone {
+    aspect-ratio: 4/3; background: var(--paper); border: 2px dashed rgba(26,34,51,0.3); border-radius: 10px;
+    display: grid; place-items: center; cursor: pointer; position: relative; overflow: hidden;
+  }
+  .upload-zone:hover { background: var(--leaf-light); border-color: var(--leaf); }
+  .upload-zone.has-image { border-style: solid; border-color: var(--ink); padding: 0; }
+  .upload-zone img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .upload-zone .ph { font-family: var(--mono); font-size: 11px; color: var(--ink-2); text-align: center; padding: 20px; }
+  .upload-zone .ph .em { font-size: 28px; display: block; margin-bottom: 6px; }
+  .upload-cell input[type="file"] { display: none; }
+  .upload-cell .actions { display: flex; gap: 6px; }
+  .upload-cell .actions button { flex: 1; padding: 6px 8px; font-size: 12px; font-family: var(--mono); border: 1.5px solid var(--ink); background: var(--paper); border-radius: 6px; cursor: pointer; }
+  .upload-cell .actions button:hover { background: var(--ink); color: var(--paper); }
+
+  /* ── Step 4: book ─────────────────────────── */
+  .book-spread {
+    background: var(--paper-2); border: 3px solid var(--ink); border-radius: 18px;
+    box-shadow: 6px 6px 0 var(--ink); padding: 24px; position: relative;
+  }
+  .book-spread::before, .book-spread::after {
+    content: ''; position: absolute; top: 10%; bottom: 10%; width: 1px;
+    background: rgba(26,34,51,0.2);
+  }
+  .book-spread::before { left: 50%; }
+  .page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  @media (max-width: 800px) { .page-grid { grid-template-columns: 1fr; } .book-spread::before { display: none; } }
+  .page {
+    display: flex; flex-direction: column; gap: 12px; padding: 8px;
+  }
+  .page .page-no { font-family: var(--mono); font-size: 11px; color: var(--ink-2); letter-spacing: 0.1em; }
+  .page-img {
+    aspect-ratio: 4/3; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden;
+    background: repeating-linear-gradient(45deg, rgba(0,0,0,0.04), rgba(0,0,0,0.04) 8px, transparent 8px, transparent 16px), var(--paper);
+    display: grid; place-items: center;
+  }
+  .page-img img { width: 100%; height: 100%; object-fit: cover; }
+  .page-text { font-size: 15px; line-height: 1.7; }
+  .page-img .ph { font-family: var(--mono); font-size: 11px; color: var(--ink-2); text-align: center; padding: 18px; }
+
+  @media print {
+    body { background: white; }
+    .stage { max-width: none; padding: 0; }
+    .topbar, .stepper, .nav, .footer-tip, .head .teacher-note { display: none; }
+    .body { border: none; padding: 0; }
+    .lesson-box { display: none; }
+  }
+
+  .style-pick { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+  .style-pick .chip .em { display: block; font-size: 22px; line-height: 1; margin-bottom: 4px; }
+
+  /* ── Play Mode ─────────────────────────── */
+  .play-overlay {
+    position: fixed; inset: 0; background: #0a0e1a; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px; gap: 20px;
+  }
+  .play-stage {
+    position: relative; width: min(92vw, 1100px); aspect-ratio: 16/10;
+    background: #000; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .play-page {
+    position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s ease;
+    pointer-events: none;
+  }
+  .play-page.on { opacity: 1; pointer-events: auto; }
+  .play-img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  .play-img.play-ph {
+    display: grid; place-items: center; color: #fff8; font-family: var(--mono); font-size: 14px;
+    background: repeating-linear-gradient(45deg, #1a2233, #1a2233 12px, #0e1422 12px, #0e1422 24px);
+  }
+  /* Ken Burns: gentle zoom + pan, only on active page */
+  @keyframes kenburns {
+    0%   { transform: scale(1.05) translate(0, 0); }
+    50%  { transform: scale(1.14) translate(-1.5%, -1%); }
+    100% { transform: scale(1.20) translate(1.5%, 1.5%); }
+  }
+  .play-img.kenburns { animation: kenburns 14s ease-in-out infinite alternate; }
+  .play-caption {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 28px 36px 32px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 60%);
+    color: #fff;
+  }
+  .play-cap-title {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em;
+    color: #ffd966; margin-bottom: 8px;
+  }
+  .play-cap-text {
+    font-size: clamp(18px, 2.4vw, 26px); line-height: 1.6; font-weight: 500;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+    text-wrap: pretty;
+  }
+  .play-progress {
+    position: absolute; top: 18px; left: 18px; right: 18px;
+    display: flex; gap: 6px;
+  }
+  .play-progress span {
+    flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.18);
+    transition: background 0.4s;
+  }
+  .play-progress span.on { background: #ffd966; }
+  .play-meta {
+    position: absolute; top: 38px; left: 18px; right: 18px;
+    display: flex; justify-content: space-between;
+    color: rgba(255,255,255,0.6); font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .play-controls {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  }
+  .play-controls .btn {
+    background: #1a2233; color: #fff; border-color: #2a3548;
+    box-shadow: 3px 3px 0 #000;
+  }
+  .play-controls .btn:hover { background: #243049; }
+  .play-controls .btn.primary { background: #ffd966; color: #1a2233; border-color: #1a2233; }
+  .play-controls .btn:disabled { opacity: 0.4; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="200" fill="#fff3dc"/>
+    <rect x="40" y="50" width="120" height="100" rx="6" fill="#fffaf0" stroke="#1a2233" stroke-width="3"/>
+    <rect x="46" y="56" width="50" height="88" fill="#d4ecd9" stroke="#1a2233" stroke-width="2"/>
+    <rect x="104" y="56" width="50" height="88" fill="#cbe7f0" stroke="#1a2233" stroke-width="2"/>
+    <circle cx="71" cy="90" r="14" fill="#4a9d5f"/>
+    <path d="M 110 110 q 20 -16 40 0" stroke="#1a2233" stroke-width="2" fill="none"/>
+    <text x="100" y="180" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="#1a2233">AI 愛的行動</text>
+  </svg>
+</template>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useRef, useEffect } = React;
+
+const TWEAKS_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "showTeacherNote": true,
+  "artStyle": "watercolor"
+}/*EDITMODE-END*/;
+
+// ── Persistent state hook ──────────────────────
+// localStorage-backed useState. Survives page refresh.
+// Skips writing when the value is the initial value (avoid clobbering on first mount).
+const STORAGE_KEY = 'love-act-state-v1';
+function loadStored() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+  catch { return {}; }
+}
+function saveStored(patch) {
+  try {
+    const cur = loadStored();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch }));
+  } catch (e) {
+    if (patch.scenes) {
+      try {
+        const slim = patch.scenes.map(s => ({ ...s, image: null, voice: null }));
+        const cur = loadStored();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch, scenes: slim, _imagesDropped: true }));
+        window.dispatchEvent(new CustomEvent('images-dropped'));
+      } catch {}
+    }
+  }
+}
+function useStoredState(key, initial) {
+  const [val, setVal] = useState(() => {
+    const stored = loadStored();
+    return key in stored ? stored[key] : initial;
+  });
+  useEffect(() => { saveStored({ [key]: val }); }, [key, val]);
+  return [val, setVal];
+}
+function clearStored() { try { localStorage.removeItem(STORAGE_KEY); } catch {} }
+
+// ── Voice recording hook ──────────────────────
+function useVoiceRecorder(onDone) {
+  const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const recRef = useRef(null);
+  const streamRef = useRef(null);
+  const startRef = useRef(0);
+  const tickRef = useRef(null);
+
+  async function start() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mimes = ['audio/webm; codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+      const mime = mimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      recRef.current = rec;
+      const chunks = [];
+      rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunks, { type: mime || 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = () => onDone(reader.result);
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(t => t.stop());
+        if (tickRef.current) clearInterval(tickRef.current);
+      };
+      rec.start();
+      startRef.current = Date.now();
+      setElapsed(0);
+      tickRef.current = setInterval(() => {
+        setElapsed(((Date.now() - startRef.current) / 1000));
+      }, 100);
+      setRecording(true);
+    } catch (e) {
+      alert('無法存取麥克風：' + (e.message || e) + '\n\n請允許瀏覽器使用麥克風。');
+    }
+  }
+  function stop() {
+    if (recRef.current && recRef.current.state !== 'inactive') {
+      recRef.current.stop();
+    }
+    setRecording(false);
+  }
+  useEffect(() => () => {
+    if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop();
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    if (tickRef.current) clearInterval(tickRef.current);
+  }, []);
+  return { recording, elapsed, start, stop };
+}
+
+// ── Speech recognition hook (for story input) ──
+function useSpeech(lang, onText) {
+  const [listening, setListening] = useState(false);
+  const recRef = useRef(null);
+  const supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  function start() {
+    if (!supported) {
+      alert('您的瀏覽器不支援語音輸入，建議用 Chrome 或 Edge。');
+      return;
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = lang;
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.onresult = (e) => {
+      let text = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) text += e.results[i][0].transcript;
+      }
+      if (text) onText(text);
+    };
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed') alert('請允許瀏覽器使用麥克風。');
+      setListening(false);
+    };
+    rec.onend = () => setListening(false);
+    rec.start();
+    recRef.current = rec;
+    setListening(true);
+  }
+  function stop() {
+    if (recRef.current) try { recRef.current.stop(); } catch {}
+    setListening(false);
+  }
+  useEffect(() => () => { if (recRef.current) try { recRef.current.stop(); } catch {} }, []);
+  return { listening, supported, start, stop };
+}
+
+// ── VoiceRecorder UI component ────────────────
+function VoiceRecorder({ voice, onChange }) {
+  const { recording, elapsed, start, stop } = useVoiceRecorder(onChange);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontFamily: 'var(--mono)', fontSize: 11 }}>
+      {!recording ? (
+        <button
+          type="button"
+          onClick={start}
+          style={{ background: voice ? 'var(--leaf-light)' : 'var(--paper-2)', border: '2px solid var(--ink)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}
+        >
+          🎤 {voice ? '重新錄' : '錄音'}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={stop}
+          style={{ background: 'var(--tomato)', color: 'var(--paper)', border: '2px solid var(--ink)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}
+        >
+          ⏺ 停止 ({elapsed.toFixed(1)}s)
+        </button>
+      )}
+      {voice && !recording ? (
+        <>
+          <audio src={voice} controls style={{ height: 28, maxWidth: 180 }} />
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14 }}
+            title="刪除錄音"
+          >🗑️</button>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+const STORY_SEEDS = [
+  '我會好好吃飯，不挑食。',
+  '我會早點睡覺，不讓爸媽擔心。',
+  '我會整理自己的房間和書包。',
+  '我會主動說「謝謝」和「對不起」。',
+  '我會幫媽媽做一件家事。',
+  '我會認真上課，回家把作業做完。',
+];
+
+const ART_STYLES = [
+  { id: 'watercolor', label: '水彩繪本風', zh: '溫柔的水彩風兒童繪本插畫',
+    svg: `<svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><path d="M6 26Q5 47 28 50Q51 47 50 26Z" fill="#f7d498"/><ellipse cx="28" cy="26" rx="22" ry="7" fill="#f0c070"/><ellipse cx="28" cy="25" rx="19" ry="5.5" fill="#fff8ec"/><ellipse cx="21" cy="22" rx="4" ry="2.2" fill="#fffdf6" transform="rotate(-12,21,22)"/><ellipse cx="28" cy="20" rx="4" ry="2.2" fill="#fffdf6"/><ellipse cx="35" cy="22" rx="4" ry="2.2" fill="#fffdf6" transform="rotate(12,35,22)"/><ellipse cx="24" cy="26.5" rx="4" ry="2.2" fill="#fffdf6"/><ellipse cx="32" cy="26.5" rx="4" ry="2.2" fill="#fffdf6"/><path d="M22 16Q24 12 22 8" stroke="#e8a84a" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.7"/><path d="M28 14Q30 10 28 6" stroke="#e8a84a" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.7"/><path d="M34 16Q36 12 34 8" stroke="#e8a84a" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.7"/></svg>` },
+  { id: 'crayon', label: '蠟筆童趣', zh: '蠟筆畫，童趣風格，簡單的形狀',
+    svg: `<svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><path d="M5 26Q4 47 28 50Q52 47 51 26Z" fill="#FFD740" stroke="#2a2a2a" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="28" cy="26" rx="23" ry="7" fill="#FFE57F" stroke="#2a2a2a" stroke-width="2.5"/><ellipse cx="28" cy="25" rx="18" ry="5" fill="#FFFDE7"/><ellipse cx="21" cy="22" rx="4" ry="2.5" fill="white" stroke="#333" stroke-width="1.5" transform="rotate(-12,21,22)"/><ellipse cx="28" cy="20" rx="4" ry="2.5" fill="white" stroke="#333" stroke-width="1.5"/><ellipse cx="35" cy="22" rx="4" ry="2.5" fill="white" stroke="#333" stroke-width="1.5" transform="rotate(12,35,22)"/><ellipse cx="24" cy="26" rx="4" ry="2.5" fill="white" stroke="#333" stroke-width="1.5"/><ellipse cx="32" cy="26" rx="4" ry="2.5" fill="white" stroke="#333" stroke-width="1.5"/><path d="M21 16Q23 12 21 9" stroke="#FF7043" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M28 14Q30 10 28 7" stroke="#FF7043" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M35 16Q37 12 35 9" stroke="#FF7043" stroke-width="2" fill="none" stroke-linecap="round"/></svg>` },
+  { id: 'flat', label: '扁平卡通', zh: '扁平卡通插畫，色彩鮮豔',
+    svg: `<svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><path d="M6 26Q5 47 28 50Q51 47 50 26Z" fill="#FF6B6B"/><ellipse cx="28" cy="26" rx="22" ry="7" fill="#FF8E8E"/><ellipse cx="28" cy="25" rx="18" ry="5" fill="#FFF0F0"/><rect x="17" y="19" width="8" height="5" rx="2.5" fill="white" transform="rotate(-12,21,21.5)"/><rect x="24" y="17" width="8" height="5" rx="2.5" fill="white"/><rect x="31" y="19" width="8" height="5" rx="2.5" fill="white" transform="rotate(12,35,21.5)"/><rect x="20" y="23.5" width="8" height="5" rx="2.5" fill="white"/><rect x="28" y="23.5" width="8" height="5" rx="2.5" fill="white"/><rect x="20" y="7" width="3" height="8" rx="1.5" fill="#FFB3B3"/><rect x="26.5" y="5" width="3" height="8" rx="1.5" fill="#FFB3B3"/><rect x="33" y="7" width="3" height="8" rx="1.5" fill="#FFB3B3"/></svg>` },
+  { id: 'studio', label: '吉卜力感', zh: '夢幻手繪動畫風，柔和粉彩色調',
+    svg: `<svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><path d="M6 26Q5 47 28 50Q51 47 50 26Z" fill="#9DC88D"/><path d="M6 26Q5 47 28 50Q51 47 50 26Z" fill="#B5D5A8" opacity="0.5"/><ellipse cx="28" cy="26" rx="22" ry="7" fill="#B8D4AF"/><ellipse cx="28" cy="25" rx="18" ry="5" fill="#F5FDF0"/><ellipse cx="21" cy="22" rx="4.5" ry="2.5" fill="#FEFFF8" transform="rotate(-10,21,22)"/><ellipse cx="28" cy="20" rx="4.5" ry="2.5" fill="#FEFFF8"/><ellipse cx="35" cy="22" rx="4.5" ry="2.5" fill="#FEFFF8" transform="rotate(10,35,22)"/><ellipse cx="24" cy="27" rx="4.5" ry="2.5" fill="#FEFFF8"/><ellipse cx="32" cy="27" rx="4.5" ry="2.5" fill="#FEFFF8"/><path d="M22 16Q25 12 22 8" stroke="#7AAD6E" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.8"/><path d="M28 14Q31 10 28 6" stroke="#7AAD6E" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.8"/><path d="M34 16Q37 12 34 8" stroke="#7AAD6E" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.8"/></svg>` },
+  { id: 'paper', label: '紙張剪貼', zh: '紙張剪貼拼貼風格',
+    svg: `<svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><path d="M8 28Q7 49 30 52Q53 49 52 28Z" fill="#B0C4DE" opacity="0.4"/><path d="M6 26Q5 47 28 50Q51 47 50 26Z" fill="#E8D5C0"/><ellipse cx="28" cy="26" rx="22" ry="7" fill="#D4C4AF"/><ellipse cx="28" cy="25" rx="18" ry="5" fill="#F5EDE0"/><ellipse cx="21.5" cy="22.5" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6" transform="rotate(-15,21.5,22.5)"/><ellipse cx="21" cy="22" rx="4" ry="2.2" fill="white" transform="rotate(-15,21,22)"/><ellipse cx="28.5" cy="20.5" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6"/><ellipse cx="28" cy="20" rx="4" ry="2.2" fill="white"/><ellipse cx="35.5" cy="22.5" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6" transform="rotate(15,35.5,22.5)"/><ellipse cx="35" cy="22" rx="4" ry="2.2" fill="white" transform="rotate(15,35,22)"/><ellipse cx="24.5" cy="27" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6"/><ellipse cx="24" cy="26.5" rx="4" ry="2.2" fill="white"/><ellipse cx="32.5" cy="27" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6"/><ellipse cx="32" cy="26.5" rx="4" ry="2.2" fill="white"/></svg>` },
+];
+
+async function callGemini(prompt, key, retryCount = 0) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${encodeURIComponent(key)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    let code = null;
+    try { code = JSON.parse(txt)?.error?.code; } catch {}
+    if (code === 429 && retryCount < 2) {
+      // RPM limit hit — wait and retry automatically
+      const waitSec = (retryCount + 1) * 30;
+      await new Promise(r => setTimeout(r, waitSec * 1000));
+      return callGemini(prompt, key, retryCount + 1);
+    }
+    let msg = 'Gemini error: ' + txt.slice(0, 200);
+    try {
+      if (code === 429) msg = '📵 請求太頻繁，已自動重試 2 次仍失敗。請等 1 分鐘後再試，或換一個 API Key。';
+      else if (code === 403 || code === 401) msg = '🔑 API Key 無效，請確認 Key 是從 aistudio.google.com/apikey 複製的，沒有多餘空格。';
+    } catch {}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function callClaude(prompt) {
+  if (window.claude && window.claude.complete) {
+    return window.claude.complete(prompt);
+  }
+  const key = (localStorage.getItem('GEMINI_KEY') || '').trim();
+  if (!key) throw new Error('NEED_KEY');
+  return callGemini(prompt, key);
+}
+
+function hasAI() {
+  return !!(window.claude && window.claude.complete) || !!(localStorage.getItem('GEMINI_KEY') || '').trim();
+}
+
+function ApiKeyPanel({ onSaved }) {
+  const [key, setKey] = React.useState(localStorage.getItem('GEMINI_KEY') || '');
+  const [saved, setSaved] = React.useState(false);
+  const [testing, setTesting] = React.useState(false);
+  const [testResult, setTestResult] = React.useState(null);
+
+  function save() {
+    localStorage.setItem('GEMINI_KEY', key.trim());
+    setSaved(true);
+    setTestResult(null);
+    setTimeout(() => setSaved(false), 1800);
+    if (onSaved) onSaved();
+  }
+  function clear() {
+    localStorage.removeItem('GEMINI_KEY');
+    setKey('');
+    setTestResult(null);
+    if (onSaved) onSaved();
+  }
+  async function testKey() {
+    const k = key.trim();
+    if (!k) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${encodeURIComponent(k)}`;
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: '回答「OK」兩個字就好' }] }] }),
+      });
+      if (res.ok) {
+        setTestResult({ ok: true, msg: '✅ Key 有效，可以使用！' });
+        localStorage.setItem('GEMINI_KEY', k);
+        if (onSaved) onSaved();
+      } else {
+        const txt = await res.text();
+        let msg = '❌ Key 無效';
+        try {
+          const err = JSON.parse(txt);
+          const code = err?.error?.code;
+          if (code === 429) msg = '📵 此 Key 今日配額已用完，請換另一個 Google 帳號的 Key';
+          else if (code === 400) msg = '❌ Key 格式錯誤，請重新複製';
+          else if (code === 403 || code === 401) msg = '❌ Key 無效或沒有權限';
+        } catch {}
+        setTestResult({ ok: false, msg });
+      }
+    } catch (e) {
+      setTestResult({ ok: false, msg: '❌ 網路錯誤，請確認網路連線' });
+    }
+    setTesting(false);
+  }
+
+  return (
+    <div style={{ marginTop: 16, padding: 16, background: 'var(--sky-light)', border: '2px solid var(--ink)', borderRadius: 12 }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.08em', marginBottom: 8 }}>
+        🔑 設定 GEMINI API 金鑰（一次設定，瀏覽器記住）
+      </div>
+      <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
+        到 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700 }}>Google AI Studio</a> 免費申請一個 API Key，貼到下面。金鑰只存在你的瀏覽器，不會傳到別處。
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <input
+          type="password"
+          placeholder="貼上 API Key…"
+          value={key}
+          onChange={e => { setKey(e.target.value); setTestResult(null); }}
+          style={{ flex: 1, minWidth: 180, padding: '10px 12px', border: '2px solid var(--ink)', borderRadius: 8, fontFamily: 'var(--mono)', fontSize: 13 }}
+        />
+        <button className="btn" onClick={testKey} disabled={!key.trim() || testing}>
+          {testing ? '測試中…' : '🧪 測試'}
+        </button>
+        <button className="btn" onClick={save} disabled={!key.trim()}>{saved ? '✓ 已儲存' : '儲存'}</button>
+        {localStorage.getItem('GEMINI_KEY') ? <button className="btn" onClick={clear}>清除</button> : null}
+      </div>
+      {testResult && (
+        <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: testResult.ok ? '#d4edda' : '#fde8e8', fontSize: 13, fontWeight: 600 }}>
+          {testResult.msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stepper({ step, setStep, can }) {
+  const steps = [
+    { name: '說故事', desc: 'TELL' },
+    { name: '拆畫面', desc: 'PROMPT' },
+    { name: '去畫圖', desc: 'GENERATE' },
+    { name: '組繪本', desc: 'BOOK' },
+  ];
+  return (
+    <div className="stepper">
+      {steps.map((s, i) => (
+        <div key={i} className={`step ${step === i ? 'active' : ''} ${step > i ? 'done' : ''}`} onClick={() => { if (i <= can) setStep(i); }}>
+          <div className="num"><span>{i + 1}</span></div>
+          <div className="name">{s.name}</div>
+          <div className="desc">{s.desc}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TeacherNote({ show, children }) { if (!show) return null; return <div className="teacher-note">{children}</div>; }
+
+// ── Step 1 ────────────────────────────────────
+function Step1({ story, setStory, kidName, setKidName, showNote, next }) {
+  const { listening, supported, start: startListen, stop: stopListen } = useSpeech('zh-TW', (text) => {
+    setStory(prev => prev ? prev + text : text);
+  });
+  return (
+    <>
+      <div className="head">
+        <div>
+          <h2>① 寫下承諾 · 我的愛的行動是什麼？</h2>
+          <div className="lede">想一想你要用什麼行動來表達愛。可以是對爸媽、對自己、對朋友的承諾。寫下來，AI 幫你畫成一本繪本！</div>
+        </div>
+        <TeacherNote show={showNote}>引導問：「你想對誰表達愛？你會用什麼行動？」讓小朋友說出 2~4 個具體承諾，老師幫忙打進去。</TeacherNote>
+      </div>
+
+      <h3 className="label-h"><em>A</em>這本繪本的主角是誰？</h3>
+      <input type="text" placeholder="例如：小華 / 三年二班" value={kidName} onChange={e => setKidName(e.target.value)} />
+
+      <div className="story-tools" style={{ marginTop: 22 }}>
+        <div>
+          <h3 className="label-h"><em>B</em>沒靈感？挑一個承諾當開始</h3>
+          <div className="seed-list">
+            {STORY_SEEDS.map(s => (
+              <button key={s} onClick={() => setStory(prev => prev ? prev + ' ' + s : s)}>{s}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h3 className="label-h"><em>C</em>把故事打進來（或老師幫忙打）<span style={{fontFamily:'var(--mono)',fontSize:11,color:story.length>600?'var(--tomato)':'var(--ink-2)',marginLeft:8}}>{story.length} 字{story.length>600?' · 建議 600 字以內':''}</span></h3>
+          {story.length > 600 && <div className="lesson-box warn" style={{marginBottom:8}}>⚠️ 故事太長，AI 可能無法完整讀取，建議刪減到 600 字以內。</div>}
+          <textarea
+            rows={10}
+            placeholder="我要對爸爸媽媽做的愛的行動：&#10;&#10;我會好好吃飯，不挑食，讓爸媽不用擔心我的身體。&#10;我會早點睡覺，明天精神好，讓媽媽放心。&#10;我會幫忙洗碗，因為爸媽工作很累。"
+            value={story}
+            onChange={e => setStory(e.target.value)}
+          />
+          <div className="recording-area">
+            <button
+              className={`mic-btn ${listening ? 'recording' : ''}`}
+              onClick={listening ? stopListen : startListen}
+              title={listening ? '點一下停止' : '點一下開始說話'}
+              disabled={!supported}
+              style={!supported ? { opacity: 0.4, cursor: 'not-allowed' } : null}
+            >
+              {listening ? '⏺' : '🎤'}
+            </button>
+            <span>
+              {!supported ? '· 您的瀏覽器不支援語音輸入（請用 Chrome/Edge）'
+                : listening ? '· 🔴 聽你說話中…再按一次停止'
+                : '· 按麥克風用講的，AI 自動轉文字（建議 Chrome/Edge）'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="lesson-box">
+        寫越具體越好！不是「我愛媽媽」，而是「我每天晚上會幫媽媽擦桌子」。具體的承諾，AI 才能畫出真實的畫面。
+      </div>
+
+      <div className="nav">
+        <span />
+        <button className="btn primary big" disabled={story.trim().length < 8} onClick={next}>
+          {story.trim().length < 8 ? `先打幾個字（${story.trim().length}/8）` : '故事好了 → 拆畫面'}
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Step 2 ────────────────────────────────────
+function Step2({ story, scenes, setScenes, setSceneField, busy, generateScenes, regenerateScene, regeneratingIndex, addScene, deleteScene, pageCount, setPageCount, artStyle, setArtStyle, copiedIndex, copyPrompt, showNote, prev, next, needKey, setNeedKey }) {
+  return (
+    <>
+      <div className="head">
+        <div>
+          <h2>② 拆畫面 · 把每個承諾變成一張圖</h2>
+          <div className="lede">AI 會把你的愛的行動拆成 4 張圖，每張畫出你實踐承諾的樣子，並配一個「畫畫指令（Prompt）」。</div>
+        </div>
+        <TeacherNote show={showNote}>重點教學：每個畫面對應一個承諾。說「畫小朋友吃飯」太空泛；說「水彩風，小男孩把碗裡的菜全吃完，露出滿足的笑容，媽媽在旁邊開心看著」AI 才能畫得像。</TeacherNote>
+      </div>
+
+      <h3 className="label-h"><em>A</em>選一個繪本風格</h3>
+      <div className="style-pick">
+        {ART_STYLES.map(s => (
+          <button key={s.id} className={`chip ${artStyle === s.id ? 'selected tone-rose' : ''}`} onClick={() => setArtStyle(s.id)} style={{ minWidth: 100, padding: '10px 14px', textAlign: 'center' }}>
+            <span dangerouslySetInnerHTML={{__html: s.svg}} style={{display:'block', width:52, height:52, margin:'0 auto 4px'}} />
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <h3 className="label-h" style={{ marginTop: 18 }}><em>B</em>選頁數（AI 會幫你拆成幾個畫面）</h3>
+      <div className="chip-row">
+        {[4, 6, 8].map(n => (
+          <button
+            key={n}
+            className={`chip ${pageCount === n ? 'selected tone-sky' : ''}`}
+            onClick={() => setPageCount(n)}
+          >{n} 頁</button>
+        ))}
+        <span style={{ alignSelf: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-2)', marginLeft: 6 }}>
+          {pageCount === 4 ? '· 短短一個故事' : pageCount === 6 ? '· 故事比較完整' : '· 像一本小繪本'}
+        </span>
+      </div>
+
+      {needKey ? <ApiKeyPanel onSaved={() => setNeedKey(!hasAI())} /> : null}
+      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <h3 className="label-h" style={{ margin: 0 }}><em>C</em>AI 拆出的畫面（{scenes.length} 張）</h3>
+        <button className="btn" onClick={generateScenes} disabled={busy}>
+          {scenes.length > 0 ? `🔄 重新拆（${pageCount} 頁）` : `✨ 讓 AI 拆成 ${pageCount} 個畫面`}
+        </button>
+      </div>
+
+      {busy ? (
+        <div className="thinking" style={{ marginTop: 20 }}>
+          <span className="thinking-dot" /><span className="thinking-dot" /><span className="thinking-dot" />
+          <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 11 }}>AI 正在讀故事、拆畫面…</div>
+        </div>
+      ) : null}
+
+      {scenes.length > 0 && !busy ? (
+        <div className="scene-grid" style={{ marginTop: 14 }}>
+          {scenes.map((s, i) => (
+            <div key={i} className="scene-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span className="scene-no" style={{ margin: 0 }}>畫面 {i + 1} / {scenes.length}</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    onClick={() => regenerateScene(i)}
+                    disabled={regeneratingIndex !== null}
+                    style={{ padding: '4px 10px', background: regeneratingIndex === i ? 'var(--leaf)' : 'var(--paper)', color: regeneratingIndex === i ? 'var(--paper)' : 'var(--ink)', border: '1.5px solid var(--ink)', borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer' }}
+                    title="只重畫這一頁"
+                  >
+                    {regeneratingIndex === i ? '… 重畫中' : '🔁 重畫這頁'}
+                  </button>
+                  <button
+                    onClick={() => deleteScene(i)}
+                    style={{ padding: '4px 10px', background: 'var(--paper)', color: 'var(--ink)', border: '1.5px solid var(--ink)', borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer' }}
+                    title="刪掉這一頁"
+                  >🗑 刪</button>
+                </div>
+              </div>
+              <input
+                type="text"
+                value={s.title}
+                onChange={e => setSceneField(i, 'title', e.target.value)}
+                style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, padding: '6px 10px' }}
+              />
+              <textarea
+                rows={2}
+                value={s.text}
+                onChange={e => setSceneField(i, 'text', e.target.value)}
+                style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-2)', marginBottom: 12, padding: '8px 10px' }}
+              />
+              <div className="prompt-card" style={{ padding: 0, border: 'none', background: 'transparent' }}>
+                <strong style={{ fontFamily: 'var(--hand)', display: 'block', marginBottom: 6 }}>
+                  給畫圖 AI 的指令（可以自己改）：
+                </strong>
+                <div style={{ position: 'relative' }}>
+                  <textarea
+                    rows={3}
+                    value={s.prompt}
+                    onChange={e => setSceneField(i, 'prompt', e.target.value)}
+                    style={{ fontFamily: 'var(--hand)', fontSize: 15, lineHeight: 1.7, padding: '12px 14px', border: '2px dashed rgba(26,34,51,0.3)', background: 'var(--paper)', resize: 'vertical' }}
+                  />
+                  <button
+                    className={`copy-btn ${copiedIndex === i ? 'copied' : ''}`}
+                    onClick={() => copyPrompt(s.prompt, i)}
+                    style={{ position: 'absolute', top: 8, right: 8, padding: '4px 10px', background: copiedIndex === i ? 'var(--leaf)' : 'var(--ink)', color: 'var(--paper)', border: 'none', borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer' }}
+                  >
+                    {copiedIndex === i ? '✓ 已複製' : '📋 複製'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addScene}
+            style={{ padding: '14px 18px', background: 'var(--paper)', border: '2px dashed rgba(26,34,51,0.35)', borderRadius: 14, fontFamily: 'var(--hand)', fontSize: 15, color: 'var(--ink-2)', cursor: 'pointer' }}
+          >
+            ＋ 再加一個畫面
+          </button>
+        </div>
+      ) : null}
+
+      {scenes.length === 0 && !busy ? (
+        <div style={{ marginTop: 20, padding: 30, textAlign: 'center', background: 'var(--paper-2)', borderRadius: 12, border: '2px dashed rgba(26,34,51,0.3)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-2)' }}>
+            按上面「讓 AI 拆畫面」開始
+          </div>
+        </div>
+      ) : null}
+
+      <div className="lesson-box">
+        Prompt 是給 AI 看的「畫畫指令」！上面 AI 幫你寫好了，<strong>你可以自己改</strong> — 把不喜歡的字刪掉、加上自己想要的東西（像「我想要海龜戴紅色帽子」）。寫越清楚，AI 畫得越像你想的。
+      </div>
+
+      <div className="nav">
+        <button className="btn" onClick={prev}>← 改故事</button>
+        <button className="btn primary big" disabled={scenes.length === 0} onClick={next}>下一步 → 去畫圖</button>
+      </div>
+    </>
+  );
+}
+
+// ── Step 3 ────────────────────────────────────
+const EXTERNAL_AI = [
+  { name: 'Gemini', icon: '✦', desc: 'Google 出品、免費、中文超強', url: 'https://gemini.google.com/' },
+  { name: 'Bing Image Creator', icon: '🎨', desc: '免費、中文 OK、適合課堂', url: 'https://www.bing.com/images/create' },
+  { name: 'Canva Magic Media', icon: '✨', desc: '老師帳號內建、整合排版', url: 'https://www.canva.com/ai-image-generator/' },
+  { name: 'ChatGPT (圖)', icon: '🤖', desc: 'ChatGPT 可直接生圖', url: 'https://chatgpt.com/' },
+];
+
+function Step3({ scenes, setSceneImage, copiedIndex, copyPrompt, showNote, prev, next }) {
+  return (
+    <>
+      <div className="head">
+        <div>
+          <h2>③ 去畫圖 · 帶 Prompt 到外面的畫圖 AI</h2>
+          <div className="lede">老師打開下面其中一個 AI 工具，把每張畫面的 Prompt 貼進去，AI 畫好後把圖載下來，再上傳回來這裡。</div>
+        </div>
+        <TeacherNote show={showNote}>建議：投影機開兩個視窗，一邊本頁面、一邊 Bing / Canva。每張圖貼上 Prompt，等 AI 畫完，下載，回來上傳。</TeacherNote>
+      </div>
+
+      <h3 className="label-h"><em>A</em>選一個畫圖 AI（在新分頁打開）</h3>
+      <div className="ai-tools-grid">
+        {EXTERNAL_AI.map(t => (
+          <div key={t.name} className="ai-tool-card">
+            <div className="tool-icon">{t.icon}</div>
+            <div className="tool-name">{t.name}</div>
+            <div className="tool-desc">{t.desc}</div>
+            <a href={t.url} target="_blank" rel="noopener noreferrer">打開 ↗</a>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="label-h"><em>B</em>把 AI 畫好的圖上傳回來（每張對應一個畫面）</h3>
+      <div className="upload-row">
+        {scenes.map((s, i) => (
+          <SceneUpload key={i} scene={s} index={i} setSceneImage={setSceneImage} copyPrompt={copyPrompt} copied={copiedIndex === i} />
+        ))}
+      </div>
+
+      <div className="lesson-box warn">
+        <strong>⚠️ AI 有時會畫錯！</strong>例如可能畫出奇怪的手、不對的表情或多餘的人。看到怪怪的圖，就改 Prompt 再生一次 — 不用什麼都接受。
+      </div>
+
+      <div className="nav">
+        <button className="btn" onClick={prev}>← 回去看 Prompt</button>
+        <button className="btn primary big" onClick={next}>下一步 → 組繪本</button>
+      </div>
+    </>
+  );
+}
+
+function SceneUpload({ scene, index, setSceneImage, copyPrompt, copied }) {
+  const inputRef = useRef(null);
+  function handleFile(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) {
+      if (!confirm(`圖片太大（${(f.size / 1024 / 1024).toFixed(1)} MB），可能造成存儲失敗。\n建議壓縮到 2MB 以內。\n\n要繼續上傳嗎？`)) return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => setSceneImage(index, ev.target.result);
+    reader.readAsDataURL(f);
+  }
+  return (
+    <div className="upload-cell">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span className="scene-no">畫面 {index + 1}</span>
+        <button onClick={() => copyPrompt(scene.prompt, index)} style={{ border: '1.5px solid var(--ink)', background: copied ? 'var(--leaf)' : 'var(--paper)', color: copied ? 'var(--paper)' : 'var(--ink)', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer' }}>
+          {copied ? '✓ 已複製 Prompt' : '📋 複製 Prompt'}
+        </button>
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.4 }}>{scene.title}</div>
+      <div className={`upload-zone ${scene.image ? 'has-image' : ''}`} onClick={() => inputRef.current?.click()}>
+        {scene.image ? (
+          <img src={scene.image} alt={`scene ${index + 1}`} />
+        ) : (
+          <div className="ph">
+            <span className="em">🖼️</span>
+            點這裡上傳<br/>AI 畫好的圖
+          </div>
+        )}
+        <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} />
+      </div>
+      {scene.image ? (
+        <div className="actions">
+          <button onClick={() => inputRef.current?.click()}>更換</button>
+          <button onClick={() => setSceneImage(index, null)}>刪除</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ── Standalone Book HTML builder ──────────────
+function buildBookHtml(data) {
+  const escapeHtml = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const dataJson = JSON.stringify(data).replace(/<\/script>/g, '<\\/script>');
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(data.author)}的愛的行動繪本 · ${escapeHtml(data.title)}</title>
+<style>
+  :root { --ink:#1a2233; --paper:#f4ede0; --paper-2:#ebe2cf; --tomato:#e85d3c; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue','PingFang TC','Noto Sans TC',sans-serif; background: var(--paper); color: var(--ink); padding: 32px 20px; min-height: 100vh; }
+  .stage { max-width: 1100px; margin: 0 auto; }
+  .head { text-align: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px dashed rgba(26,34,51,0.25); }
+  .head .meta { font-family: 'SF Mono',Menlo,monospace; font-size: 11px; letter-spacing: .12em; opacity: .6; margin-bottom: 8px; }
+  .head h1 { font-size: clamp(28px,4vw,40px); margin-bottom: 6px; }
+  .head .by { font-size: 14px; color: rgba(26,34,51,.7); }
+  .controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 28px; flex-wrap: wrap; }
+  .btn { padding: 12px 22px; font-size: 15px; font-weight: 600; background: white; color: var(--ink); border: 2px solid var(--ink); border-radius: 999px; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); font-family: inherit; }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn.primary { background: var(--tomato); color: white; }
+  .pages { display: grid; grid-template-columns: repeat(2,1fr); gap: 26px; }
+  @media (max-width:720px){ .pages{ grid-template-columns:1fr; } }
+  .page { background: white; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 5px 5px 0 var(--ink); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .page-no { font-family: 'SF Mono',Menlo,monospace; font-size: 11px; letter-spacing: .1em; opacity: .55; }
+  .page-img { aspect-ratio: 4/3; border-radius: 10px; overflow: hidden; background: var(--paper-2); display: grid; place-items: center; }
+  .page-img img { width: 100%; height: 100%; object-fit: cover; }
+  .page-img .ph { font-family: monospace; font-size: 12px; color: rgba(26,34,51,.5); }
+  .page-title { font-weight: 700; font-size: 16px; }
+  .page-text { font-size: 14px; line-height: 1.7; }
+  .play-overlay { position: fixed; inset: 0; background: #0a0e1a; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 18px; }
+  .play-stage { position: relative; width: min(94vw,1100px); aspect-ratio: 16/10; background: #000; border-radius: 18px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .play-page { position: absolute; inset: 0; opacity: 0; transition: opacity .9s ease; }
+  .play-page.on { opacity: 1; }
+  .play-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .play-ph { display: grid; place-items: center; color: #fff8; }
+  @keyframes kb { 0%{transform:scale(1.05);} 50%{transform:scale(1.14) translate(-1.5%,-1%);} 100%{transform:scale(1.20) translate(1.5%,1.5%);} }
+  .play-img.kb { animation: kb 14s ease-in-out infinite alternate; }
+  .play-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 36px 32px; background: linear-gradient(180deg,transparent 0%,rgba(0,0,0,.85) 60%); color: white; }
+  .play-cap-title { font-family: 'SF Mono',Menlo,monospace; font-size: 12px; letter-spacing: .12em; color: #ffd966; margin-bottom: 8px; }
+  .play-cap-text { font-size: clamp(18px,2.4vw,26px); line-height: 1.6; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+  .play-progress { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; gap: 6px; }
+  .play-progress span { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); }
+  .play-progress span.on { background: #ffd966; }
+  .play-meta { position: absolute; top: 38px; left: 18px; right: 18px; display: flex; justify-content: space-between; color: rgba(255,255,255,.6); font-family: 'SF Mono',Menlo,monospace; font-size: 11px; letter-spacing: .08em; }
+  .play-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .play-controls .btn { background: #1a2233; color: white; border-color: #2a3548; box-shadow: 3px 3px 0 #000; }
+  .play-controls .btn.primary { background: #ffd966; color: #1a2233; border-color: #1a2233; }
+  @media print { body{background:white;padding:0;} .controls,.play-overlay{display:none!important;} .page{break-inside:avoid;box-shadow:none;} }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="head">
+      <div class="meta">MY LOVE IN ACTION · 我的愛的行動繪本</div>
+      <h1>${escapeHtml(data.title)}</h1>
+      <div class="by">作者：${escapeHtml(data.author)} · ${escapeHtml(data.date)}</div>
+    </div>
+    <div class="controls">
+      <button class="btn primary" onclick="play()">📽️ 播放繪本</button>
+      <button class="btn" onclick="window.print()">🖨️ 列印</button>
+    </div>
+    <div class="pages" id="pages"></div>
+  </div>
+<` + `script id="book-data" type="application/json">${dataJson}</` + `script>
+<` + `script>
+const DATA = JSON.parse(document.getElementById('book-data').textContent);
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+const pagesEl = document.getElementById('pages');
+DATA.scenes.forEach((s,i) => {
+  const p = document.createElement('div'); p.className = 'page';
+  p.innerHTML = '<div class="page-no">PAGE · '+(i+1)+' / '+DATA.scenes.length+'</div>'
+    + '<div class="page-img">'+(s.image?'<img src="'+s.image+'" alt="">':'<div class="ph">（無圖）</div>')+'</div>'
+    + '<div class="page-title">'+esc(s.title)+'</div>'
+    + '<div class="page-text">'+esc(s.text)+'</div>';
+  pagesEl.appendChild(p);
+});
+let voice=null,page=0,playing=false,voiceOn=true,timer=null,overlay=null,curAudio=null;
+function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/zh-TW|cmn-Hant/i.test(v.lang))||vs.find(v=>/zh|cmn|Chinese|Mandarin/i.test(v.lang+v.name))||vs[0]||null;}
+if(typeof speechSynthesis!=='undefined'){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+function stopAll(){if(typeof speechSynthesis!=='undefined')speechSynthesis.cancel();if(curAudio){try{curAudio.pause();}catch(e){}curAudio=null;}if(timer){clearTimeout(timer);timer=null;}}
+function speak(text,voiceUrl,onEnd){let done=false;const fin=()=>{if(done)return;done=true;onEnd();};if(voiceOn&&voiceUrl){try{if(curAudio){try{curAudio.pause();}catch(e){}}curAudio=new Audio(voiceUrl);curAudio.onended=fin;curAudio.onerror=fin;curAudio.play().catch(fin);timer=setTimeout(fin,Math.max(15000,text.length*600));return;}catch(e){}}if(!voiceOn||typeof SpeechSynthesisUtterance==='undefined'){timer=setTimeout(fin,Math.max(4500,text.length*300));return;}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);if(voice)u.voice=voice;u.lang='zh-TW';u.rate=0.85;u.pitch=1.05;u.onend=fin;u.onerror=fin;speechSynthesis.speak(u);timer=setTimeout(fin,Math.max(12000,text.length*600));}
+function render(){if(!overlay)return;overlay.querySelectorAll('.play-page').forEach((el,i)=>{el.classList.toggle('on',i===page);const img=el.querySelector('img.play-img');if(img)img.classList.toggle('kb',i===page&&playing);});overlay.querySelectorAll('.play-progress span').forEach((el,i)=>el.classList.toggle('on',i<=page));const pn=overlay.querySelector('#pn');if(pn)pn.textContent='第 '+(page+1)+' / '+DATA.scenes.length+' 頁';const bp=overlay.querySelector('#bPlay');if(bp)bp.textContent=playing?'⏸ 暫停':(page>=DATA.scenes.length-1?'↻ 重新播':'▶ 播放');}
+function step(){if(!playing)return;render();speak(DATA.scenes[page].text||'',DATA.scenes[page].voice||'',()=>{timer=setTimeout(()=>{if(!playing)return;if(page<DATA.scenes.length-1){page++;step();}else{playing=false;render();}},1400);});}
+function play(){overlay=document.createElement('div');overlay.className='play-overlay';overlay.innerHTML='<div class="play-stage">'+DATA.scenes.map((s,i)=>'<div class="play-page" data-i="'+i+'">'+(s.image?'<img class="play-img" src="'+s.image+'">':'<div class="play-img play-ph">🖼️ 無圖</div>')+'<div class="play-cap"><div class="play-cap-title">'+esc(s.title)+'</div><div class="play-cap-text">'+esc(s.text)+'</div></div></div>').join('')+'<div class="play-progress">'+DATA.scenes.map(()=>'<span></span>').join('')+'</div><div class="play-meta"><span>'+esc(DATA.author)+' · '+esc(DATA.title)+'</span><span id="pn"></span></div></div><div class="play-controls"><button class="btn" id="bPrev">← 上一頁</button><button class="btn primary" id="bPlay">⏸ 暫停</button><button class="btn" id="bNext">下一頁 →</button><button class="btn" id="bMute">🔊 朗讀中</button><button class="btn" id="bClose">✕ 關閉</button></div>';document.body.appendChild(overlay);page=0;playing=true;voiceOn=true;overlay.querySelector('#bPrev').onclick=()=>{stopAll();page=Math.max(0,page-1);playing=false;render();};overlay.querySelector('#bNext').onclick=()=>{stopAll();page=Math.min(DATA.scenes.length-1,page+1);playing=false;render();};overlay.querySelector('#bPlay').onclick=()=>{if(playing){stopAll();playing=false;render();}else{if(page>=DATA.scenes.length-1)page=0;playing=true;step();}};overlay.querySelector('#bMute').onclick=e=>{voiceOn=!voiceOn;e.target.textContent=voiceOn?'🔊 朗讀中':'🔇 靜音';};overlay.querySelector('#bClose').onclick=()=>{stopAll();overlay.remove();overlay=null;playing=false;};step();}
+window.play=play;
+</` + `script>
+</body>
+</html>`;
+}
+
+// ── Play Mode ─────────────────────────────────
+function PlayMode({ scenes, kidName, onClose }) {
+  const [page, setPage] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(true);
+  const utterRef = React.useRef(null);
+  const timerRef = React.useRef(null);
+
+  const scene = scenes[page];
+
+  // Pick a Chinese voice if available
+  const [voice, setVoice] = useState(null);
+  React.useEffect(() => {
+    if (typeof speechSynthesis === 'undefined') return;
+    function pick() {
+      const vs = speechSynthesis.getVoices();
+      const v = vs.find(x => /zh-TW|cmn-Hant/i.test(x.lang))
+             || vs.find(x => /zh|cmn|Chinese|Mandarin/i.test(x.lang + x.name))
+             || vs[0] || null;
+      setVoice(v);
+    }
+    pick();
+    speechSynthesis.onvoiceschanged = pick;
+    return () => { speechSynthesis.onvoiceschanged = null; };
+  }, []);
+
+  const audioRef = React.useRef(null);
+
+  function speak(text, voiceUrl, onEnd) {
+    let done = false;
+    const finish = () => { if (done) return; done = true; onEnd(); };
+
+    // Priority 1: kid's own recording
+    if (voiceOn && voiceUrl) {
+      try {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+        const audio = new Audio(voiceUrl);
+        audioRef.current = audio;
+        audio.onended = finish;
+        audio.onerror = finish;
+        audio.play().catch(finish);
+        // safety net
+        timerRef.current = setTimeout(finish, Math.max(15000, text.length * 600));
+        return;
+      } catch { /* fall through to TTS */ }
+    }
+
+    if (!voiceOn || typeof SpeechSynthesisUtterance === 'undefined') {
+      // No voice: read time based on length (300ms per char, min 4.5s)
+      timerRef.current = setTimeout(finish, Math.max(4500, text.length * 300));
+      return;
+    }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.lang = 'zh-TW';
+    u.rate = 0.85;
+    u.pitch = 1.05;
+    u.onend = finish;
+    u.onerror = finish;
+    utterRef.current = u;
+    speechSynthesis.speak(u);
+    // Generous safety net (only kicks in if onend never fires)
+    timerRef.current = setTimeout(finish, Math.max(12000, text.length * 600));
+  }
+
+  function stopAll() {
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    if (audioRef.current) { try { audioRef.current.pause(); } catch {} audioRef.current = null; }
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }
+
+  // page advancement
+  React.useEffect(() => {
+    if (!playing || !scene) return;
+    stopAll();
+    speak(scene.text || '', scene.voice, () => {
+      // small pause then advance
+      timerRef.current = setTimeout(() => {
+        setPage(p => {
+          if (p < scenes.length - 1) return p + 1;
+          setPlaying(false);
+          return p;
+        });
+      }, 1400);
+    });
+    return stopAll;
+  }, [page, playing, voiceOn]);
+
+  React.useEffect(() => () => stopAll(), []);
+
+  function togglePlay() {
+    if (playing) {
+      stopAll();
+      setPlaying(false);
+    } else {
+      // if at end, restart
+      if (page >= scenes.length - 1) setPage(0);
+      setPlaying(true);
+    }
+  }
+
+  return (
+    <div className="play-overlay">
+      <div className="play-stage">
+        {scenes.map((s, i) => (
+          <div key={i} className={`play-page ${i === page ? 'on' : i < page ? 'past' : 'future'}`}>
+            {s.image ? (
+              <img src={s.image} alt={s.title} className={`play-img ${i === page && playing ? 'kenburns' : ''}`} />
+            ) : (
+              <div className="play-img play-ph">🖼️ 還沒上傳這張</div>
+            )}
+            <div className="play-caption">
+              <div className="play-cap-title">{s.title}</div>
+              <div className="play-cap-text">{s.text}</div>
+            </div>
+          </div>
+        ))}
+
+        <div className="play-progress">
+          {scenes.map((_, i) => (
+            <span key={i} className={i <= page ? 'on' : ''} />
+          ))}
+        </div>
+
+        <div className="play-meta">
+          <span>{kidName || '小朋友'} · {scenes[0]?.title || '我的繪本'}</span>
+          <span>第 {page + 1} / {scenes.length} 頁</span>
+        </div>
+      </div>
+
+      <div className="play-controls">
+        <button className="btn" onClick={() => { stopAll(); setPage(p => Math.max(0, p - 1)); }} disabled={page === 0}>← 上一頁</button>
+        <button className="btn primary big" onClick={togglePlay}>
+          {playing ? '⏸ 暫停' : (page >= scenes.length - 1 ? '↻ 重新播' : '▶ 播放')}
+        </button>
+        <button className="btn" onClick={() => { stopAll(); setPage(p => Math.min(scenes.length - 1, p + 1)); }} disabled={page >= scenes.length - 1}>下一頁 →</button>
+        <button className="btn" onClick={() => setVoiceOn(v => !v)}>{voiceOn ? '🔊 朗讀中' : '🔇 靜音'}</button>
+        <button className="btn" onClick={() => { stopAll(); onClose(); }}>✕ 關閉</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Step 4 ────────────────────────────────────
+const VIDEO_SECONDS_PER_SCENE = 5;
+const VIDEO_W = 1280;
+const VIDEO_H = 720;
+
+async function exportVideo(scenes, kidName, onProgress) {
+  // Pick the best supported MIME — prefer mp4, fall back to webm
+  const mimeOptions = [
+    'video/mp4; codecs=avc1.42E01E',
+    'video/mp4',
+    'video/webm; codecs=vp9',
+    'video/webm; codecs=vp8',
+    'video/webm',
+  ];
+  const mimeType = mimeOptions.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  if (!mimeType) throw new Error('您的瀏覽器不支援影片錄製，請改用 Chrome 或 Edge');
+
+  const canvas = document.createElement('canvas');
+  canvas.width = VIDEO_W; canvas.height = VIDEO_H;
+  const ctx = canvas.getContext('2d');
+
+  // Pre-load all scene images
+  onProgress?.('載入圖片…');
+  const imgs = await Promise.all(scenes.map(s => {
+    if (!s.image) return null;
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = s.image;
+    });
+  }));
+
+  function drawScene(i, t) {
+    const s = scenes[i];
+    const img = imgs[i];
+    // Background
+    ctx.fillStyle = '#fffaf0';
+    ctx.fillRect(0, 0, VIDEO_W, VIDEO_H);
+    // Decorative border
+    ctx.strokeStyle = '#1a2233';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(40, 40, VIDEO_W - 80, VIDEO_H - 80);
+
+    // Image area: top 60% of canvas
+    const imgBoxX = 80, imgBoxY = 80, imgBoxW = VIDEO_W - 160, imgBoxH = 420;
+    if (img) {
+      const aspect = img.width / img.height;
+      const boxAspect = imgBoxW / imgBoxH;
+      let dw, dh;
+      if (aspect > boxAspect) { dw = imgBoxW; dh = dw / aspect; }
+      else { dh = imgBoxH; dw = dh * aspect; }
+      // Subtle Ken Burns zoom (1.0 → 1.05 over scene duration)
+      const zoom = 1 + 0.05 * t;
+      const zw = dw * zoom, zh = dh * zoom;
+      ctx.drawImage(img, imgBoxX + (imgBoxW - zw) / 2, imgBoxY + (imgBoxH - zh) / 2, zw, zh);
+    } else {
+      ctx.fillStyle = '#f0e6d2';
+      ctx.fillRect(imgBoxX, imgBoxY, imgBoxW, imgBoxH);
+      ctx.fillStyle = '#999';
+      ctx.font = '32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('（這頁沒有圖）', VIDEO_W / 2, imgBoxY + imgBoxH / 2);
+    }
+
+    // Title
+    ctx.fillStyle = '#1a2233';
+    ctx.font = 'bold 44px "Microsoft JhengHei", "PingFang TC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.title || '', VIDEO_W / 2, 560);
+
+    // Text — wrap by character
+    ctx.font = '26px "Microsoft JhengHei", "PingFang TC", sans-serif';
+    ctx.fillStyle = '#4a5568';
+    const text = s.text || '';
+    const maxWidth = VIDEO_W - 200;
+    let line = '';
+    let y = 610;
+    for (const ch of text) {
+      const test = line + ch;
+      if (ctx.measureText(test).width > maxWidth) {
+        ctx.fillText(line, VIDEO_W / 2, y);
+        line = ch; y += 36;
+        if (y > 670) break;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, VIDEO_W / 2, y);
+
+    // Page indicator (bottom right)
+    ctx.font = '18px sans-serif';
+    ctx.fillStyle = '#999';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${i + 1} / ${scenes.length} · ${kidName || '小朋友'}的愛的行動繪本`, VIDEO_W - 80, VIDEO_H - 60);
+  }
+
+  // First frame so the stream has something
+  drawScene(0, 0);
+
+  // Audio: decode each scene's voice (if any) and figure out per-scene duration
+  onProgress?.('準備聲音…');
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const audioBuffers = await Promise.all(scenes.map(async s => {
+    if (!s.voice) return null;
+    try {
+      const res = await fetch(s.voice);
+      const buf = await res.arrayBuffer();
+      return await audioCtx.decodeAudioData(buf);
+    } catch (e) {
+      console.warn('解碼錄音失敗', e);
+      return null;
+    }
+  }));
+  // Each scene plays for: max(default seconds, audio duration + 0.6s pad)
+  const durations = scenes.map((_, i) => {
+    if (audioBuffers[i]) return Math.max(VIDEO_SECONDS_PER_SCENE, audioBuffers[i].duration + 0.6);
+    return VIDEO_SECONDS_PER_SCENE;
+  });
+
+  // Build combined stream: canvas video + audio
+  const videoStream = canvas.captureStream(30);
+  const audioDest = audioCtx.createMediaStreamDestination();
+  const tracks = [...videoStream.getVideoTracks()];
+  const hasAnyAudio = audioBuffers.some(Boolean);
+  if (hasAnyAudio) tracks.push(...audioDest.stream.getAudioTracks());
+  const combinedStream = new MediaStream(tracks);
+
+  const recorder = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond: 2_000_000 });
+  const chunks = [];
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+  const stopped = new Promise(resolve => { recorder.onstop = resolve; });
+  recorder.start(200);
+
+  // Schedule audio playback aligned to scene start times
+  if (hasAnyAudio) {
+    const audioStart = audioCtx.currentTime + 0.05;
+    let cum = 0;
+    for (let i = 0; i < scenes.length; i++) {
+      if (audioBuffers[i]) {
+        const src = audioCtx.createBufferSource();
+        src.buffer = audioBuffers[i];
+        src.connect(audioDest);
+        src.start(audioStart + cum);
+      }
+      cum += durations[i];
+    }
+  }
+
+  // Render each scene for its duration, redrawing every frame for Ken Burns
+  for (let i = 0; i < scenes.length; i++) {
+    const dur = durations[i];
+    onProgress?.(`錄製第 ${i + 1} / ${scenes.length} 頁（${dur.toFixed(1)} 秒${audioBuffers[i] ? ' · 含錄音' : ''}）…`);
+    const start = performance.now();
+    while (true) {
+      const elapsed = (performance.now() - start) / 1000;
+      const t = Math.min(1, elapsed / dur);
+      drawScene(i, t);
+      if (elapsed >= dur) break;
+      await new Promise(r => requestAnimationFrame(r));
+    }
+  }
+  recorder.stop();
+  await stopped;
+  try { audioCtx.close(); } catch {}
+
+  const blob = new Blob(chunks, { type: mimeType });
+  const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
+  return { blob, ext, mimeType };
+}
+
+function Step4({ story, scenes, setSceneField, kidName, showNote, prev, restart }) {
+  const [playing, setPlaying] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [videoExporting, setVideoExporting] = useState(false);
+  const [videoStatus, setVideoStatus] = useState('');
+
+  async function exportBook() {
+    setExporting(true);
+    try {
+      // Build a fully self-contained HTML viewer
+      const data = {
+        title: scenes[0]?.title || '我的愛的行動繪本',
+        author: kidName || '小朋友',
+        date: new Date().toLocaleDateString('zh-TW'),
+        scenes: scenes.map(s => ({ title: s.title, text: s.text, image: s.image || '', voice: s.voice || '' })),
+      };
+      const html = buildBookHtml(data);
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${data.author}的愛的行動繪本.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function exportMP4() {
+    setVideoExporting(true);
+    setVideoStatus('準備中…');
+    try {
+      const { blob, ext } = await exportVideo(scenes, kidName, msg => setVideoStatus(msg));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${kidName || '小朋友'}的愛的行動繪本.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      setVideoStatus(ext === 'mp4' ? '✓ 完成！' : '✓ 完成！（webm 格式，可上傳到 LINE/YouTube）');
+      setTimeout(() => setVideoStatus(''), 4000);
+    } catch (e) {
+      alert('匯出影片失敗：' + (e.message || e));
+      setVideoStatus('');
+    } finally {
+      setVideoExporting(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="head">
+        <div>
+          <h2>④ 組繪本 · 你的愛的行動繪本完成了！</h2>
+          <div className="lede">恭喜！你說的故事 + AI 畫的圖 = 一本只有你能做出來的繪本。可以印出來送給最愛的人、念給家人聽。</div>
+        </div>
+        <TeacherNote show={showNote}>收尾：請小朋友念自己的繪本給全班聽。問：「你故事裡的愛是什麼？你有沒有做過這樣的事？」</TeacherNote>
+      </div>
+
+      <div className="book-spread">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.6, letterSpacing: '0.1em' }}>MY LOVE IN ACTION · 我的愛的行動繪本</div>
+            <h2 style={{ margin: 0, fontSize: 24 }}>{scenes[0]?.title || '我的故事'}</h2>
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-2)' }}>
+            作者：{kidName || '小朋友'} · {new Date().toLocaleDateString('zh-TW')}
+          </div>
+        </div>
+
+        <div className="page-grid">
+          {scenes.map((s, i) => (
+            <div key={i} className="page">
+              <div className="page-no">PAGE · {i + 1} / {scenes.length}</div>
+              <div className="page-img">
+                {s.image ? <img src={s.image} alt={s.title} /> : (
+                  <div className="ph">
+                    <div style={{ fontSize: 28, marginBottom: 6 }}>🖼️</div>
+                    （還沒上傳這張）
+                  </div>
+                )}
+              </div>
+              <div className="page-text">{s.text}</div>
+              <VoiceRecorder voice={s.voice} onChange={(v) => setSceneField(i, 'voice', v)} />
+            </div>
+          ))}
+        </div>
+
+        <div className="lesson-box" style={{ marginTop: 14, fontSize: 13 }}>
+          🎤 <strong>每一頁都可以錄音</strong>：小朋友念故事，按 ⏺ 停止。錄好後匯出 MP4 就會有自己的聲音！</div>
+      </div>
+
+      <div className="lesson-box">
+        <strong>今天我們學到的：</strong> ① 愛不是說說而已，是具體的行動 ② 我的承諾是我自己說的，要努力做到 ③ 給 AI 越清楚的描述，畫越像 ④ 這本繪本是我對家人的禮物。
+      </div>
+
+      <div className="nav">
+        <button className="btn" onClick={prev}>← 回去上傳圖</button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn primary big" onClick={() => setPlaying(true)} disabled={scenes.every(s => !s.image)}>📽️ 播放繪本</button>
+          <button className="btn" onClick={exportMP4} disabled={videoExporting || scenes.length === 0}>
+            {videoExporting ? `🎬 ${videoStatus || '錄製中…'}` : '🎬 匯出影片（MP4）'}
+          </button>
+          <button className="btn" onClick={exportBook} disabled={exporting || scenes.length === 0}>
+            {exporting ? '打包中…' : '📦 匯出繪本'}
+          </button>
+          <button className="btn" onClick={() => window.print()}>🖨️ 列印</button>
+          <button className="btn" onClick={restart}>🔄 換個小朋友</button>
+        </div>
+      </div>
+      {videoStatus && !videoExporting ? (
+        <div style={{ textAlign: 'center', marginTop: 10, fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--leaf)' }}>{videoStatus}</div>
+      ) : null}
+      {playing ? <PlayMode scenes={scenes} kidName={kidName} onClose={() => setPlaying(false)} /> : null}
+    </>
+  );
+}
+
+// ── App ──────────────────────────────────────
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAKS_DEFAULTS);
+  const [step, setStep] = useStoredState('step', 0);
+  const [kidName, setKidName] = useStoredState('kidName', '');
+  const [story, setStory] = useStoredState('story', '');
+  const [artStyle, setArtStyle] = useStoredState('artStyle', tweaks.artStyle);
+  const [pageCount, setPageCount] = useStoredState('pageCount', 4);
+  const [scenes, setScenes] = useStoredState('scenes', []); // {title, text, prompt, image, voice}
+  const [busy, setBusy] = useState(false);
+  const [regeneratingIndex, setRegeneratingIndex] = useState(null);
+  const [copiedIndex, setCopiedIndex] = useState(null);
+  const [needKey, setNeedKey] = useState(!hasAI());
+  const [showKey, setShowKey] = useState(false);
+
+  const styleZh = ART_STYLES.find(s => s.id === artStyle)?.zh || ART_STYLES[0].zh;
+
+  // Warn if images were dropped due to localStorage being full
+  const [imagesDropped, setImagesDropped] = useState(() => loadStored()._imagesDropped || false);
+  useEffect(() => {
+    if (imagesDropped) {
+      saveStored({ _imagesDropped: false });
+      setTimeout(() => setImagesDropped(false), 8000);
+    }
+  }, []);
+  useEffect(() => {
+    const handler = () => { setImagesDropped(true); setTimeout(() => setImagesDropped(false), 8000); };
+    window.addEventListener('images-dropped', handler);
+    return () => window.removeEventListener('images-dropped', handler);
+  }, []);
+
+  async function generateScenes() {
+    setBusy(true);
+    const N = pageCount;
+    const flowHint = N <= 4 ? '開始→經過→轉折→結尾'
+                  : N === 6 ? '開始→發現問題→嘗試→挫折→轉機→美好結局'
+                  : '開頭→介紹角色→發現問題→嘗試→挫折→轉機→行動→結局';
+    const storyForAI = story.trim().length > 800 ? story.trim().slice(0, 800) + '…（後略）' : story.trim();
+    const prompt = `你是幫台灣國小小朋友製作「愛的行動承諾繪本」的助手。小朋友寫下了他要對家人／自己做的愛的行動承諾，請把這些承諾拆成 ${N} 個繪本畫面，每個畫面畫出他正在實踐那個承諾的溫馨場景，並配一個能餵給「圖像生成 AI」的繁體中文 prompt。
+
+⚠️ 語言要求（很重要）：
+- 全部使用「繁體中文」（台灣正體），絕對不要用簡體字
+- 用台灣用語，例如「電腦」不是「計算機」、「影片」不是「視頻」、「網路」不是「網絡」
+
+小朋友寫的愛的行動：
+"""
+${storyForAI}
+"""
+
+繪本風格：${styleZh}
+
+要求：
+- 拆成正好 ${N} 個畫面（${flowHint}）
+- 每個畫面要有：標題（繁體中文，6 字內，例如「好好吃飯」「幫忙洗碗」）、文字（繪本頁面的承諾句，20-35 字，像小朋友在說話的口吻，例如「我每天都會把飯吃完，讓媽媽知道我有照顧好自己。」）、prompt（全部用繁體中文寫，描述小朋友正在實踐這個承諾的畫面，包含風格 "${styleZh}"、構圖、主角動作、背景、光線、溫馨氛圍）
+- prompt 例子：「一個小男孩坐在餐桌前認真吃飯，盤子裡的菜都吃完了，${styleZh}，溫暖的家裡，媽媽在旁邊微笑看著，畫面溫馨」
+- 嚴格回傳純 JSON，不要 markdown、不要說明文字
+- 格式：
+{"scenes":[{"title":"...","text":"...","prompt":"..."}, ...${N} 個]}`;
+    try {
+      let raw = await callClaude(prompt);
+      raw = raw.trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+      const data = JSON.parse(raw);
+      const newScenes = (data.scenes || []).slice(0, N).map(s => ({ ...s, image: null, voice: null }));
+      setScenes(newScenes);
+    } catch (e) {
+      if (String(e.message || '').includes('NEED_KEY')) {
+        setNeedKey(true);
+      } else {
+        alert('AI 拆畫面失敗，請再試一次。\n\n錯誤：' + (e.message || e));
+      }
+    }
+    setBusy(false);
+  }
+
+  function setSceneImage(i, dataUrl) {
+    setScenes(prev => prev.map((s, idx) => idx === i ? { ...s, image: dataUrl } : s));
+  }
+
+  function setSceneField(i, field, value) {
+    setScenes(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
+  }
+
+  async function regenerateScene(i) {
+    const target = scenes[i];
+    if (!target) return;
+    setRegeneratingIndex(i);
+    const prompt = `你是幫台灣國小小朋友把故事拆成繪本的助手。我有一個故事，已經拆好 ${scenes.length} 個畫面，但其中「第 ${i + 1} 個畫面」需要重畫。請幫我重新生成這一個畫面就好。
+
+⚠️ 語言要求：全部使用繁體中文（台灣正體），用台灣用語（電腦/影片/網路/資料/品質）。
+
+故事原文：
+"""
+${story}
+"""
+
+目前其他畫面（請保持風格一致、敘事連貫）：
+${scenes.map((s, idx) => `畫面 ${idx + 1}：${s.title} — ${s.text}`).join('\n')}
+
+需要重做的是畫面 ${i + 1}（原本：「${target.title}」）。可以換新角度、新動作、新心情，但要接得上前後。
+
+繪本風格：${styleZh}
+
+要求：
+- 標題（6 字內）、文字（30-50 字）、prompt（繁體中文，包含風格 "${styleZh}"、構圖、主體、背景、光線、氛圍）
+- 嚴格回傳純 JSON，不要 markdown
+- 格式：{"title":"...","text":"...","prompt":"..."}`;
+    try {
+      let raw = await callClaude(prompt);
+      raw = raw.trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+      const data = JSON.parse(raw);
+      setScenes(prev => prev.map((s, idx) => idx === i
+        ? { ...s, title: data.title || s.title, text: data.text || s.text, prompt: data.prompt || s.prompt }
+        : s));
+    } catch (e) {
+      if (String(e.message || '').includes('NEED_KEY')) setNeedKey(true);
+      else alert('重畫這一頁失敗：' + (e.message || e));
+    }
+    setRegeneratingIndex(null);
+  }
+
+  function addScene() {
+    setScenes(prev => [...prev, {
+      title: '新畫面',
+      text: '（在這裡寫這一頁的故事…）',
+      prompt: `${styleZh}，（描述這一頁要畫什麼）`,
+      image: null, voice: null,
+    }]);
+    setPageCount(scenes.length + 1);
+  }
+
+  function deleteScene(i) {
+    if (scenes.length <= 1) { alert('至少要留一個畫面。'); return; }
+    if (!confirm(`刪掉第 ${i + 1} 個畫面？這個動作不能還原。`)) return;
+    setScenes(prev => prev.filter((_, idx) => idx !== i));
+    setPageCount(Math.max(1, scenes.length - 1));
+  }
+
+  async function copyPrompt(text, i) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(i);
+      setTimeout(() => setCopiedIndex(null), 1600);
+    } catch (e) {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      setCopiedIndex(i);
+      setTimeout(() => setCopiedIndex(null), 1600);
+    }
+  }
+
+  function restart() {
+    if (!confirm('確定要清除目前的故事和圖嗎？這個動作不能還原。')) return;
+    clearStored();
+    setStep(0); setKidName(''); setStory(''); setScenes([]);
+  }
+
+  const canStep = useMemo(() => {
+    if (story.trim().length < 8) return 0;
+    if (scenes.length === 0) return 1;
+    return 3;
+  }, [story, scenes]);
+
+  return (
+    <div className="stage">
+      <div className="topbar">
+        <div className="brand">
+          <div className="brand-mark">❤️</div>
+          <div>
+            <h1>AI 愛的行動</h1>
+            <div className="sub">YOUR LOVE STORY · AI'S PICTURES · 你的故事 + AI 的圖</div>
+          </div>
+        </div>
+        <div className="right">
+          <div className={`pulse ${hasAI() ? '' : 'off'}`} />
+          <span>{hasAI() ? 'AI 已連線' : 'AI 未連線'}　|　💾 自動儲存</span>
+          <button type="button" onClick={() => setShowKey(s => !s)} title="設定 AI 金鑰">
+            ⚙ 設定
+          </button>
+        </div>
+      </div>
+
+      {showKey ? (
+        <div style={{ padding: '0 18px', background: 'var(--paper)', borderLeft: '3px solid var(--ink)', borderRight: '3px solid var(--ink)' }}>
+          <ApiKeyPanel onSaved={() => { setNeedKey(!hasAI()); }} />
+        </div>
+      ) : null}
+
+      {imagesDropped ? (
+        <div style={{ background: '#fbd7d0', border: '2px solid #e85d4f', borderRadius: 8, padding: '10px 14px', margin: '8px 0', fontSize: 13, color: '#1a2233' }}>
+          ⚠️ 上次儲存時圖片太大裝不下，已暫時清掉圖片（文字都還在）。如果要保留圖片，建議匯出 HTML 或 MP4。
+        </div>
+      ) : null}
+
+      <Stepper step={step} setStep={setStep} can={canStep} />
+
+      <div className="body" data-screen-label={`Step ${step + 1}`}>
+        {step === 0 && <Step1 story={story} setStory={setStory} kidName={kidName} setKidName={setKidName} showNote={tweaks.showTeacherNote} next={() => setStep(1)} />}
+        {step === 1 && <Step2 needKey={needKey} setNeedKey={setNeedKey} story={story} scenes={scenes} setScenes={setScenes} setSceneField={setSceneField} busy={busy} generateScenes={generateScenes} regenerateScene={regenerateScene} regeneratingIndex={regeneratingIndex} addScene={addScene} deleteScene={deleteScene} pageCount={pageCount} setPageCount={setPageCount} artStyle={artStyle} setArtStyle={(v) => { setArtStyle(v); setTweak('artStyle', v); }} copiedIndex={copiedIndex} copyPrompt={copyPrompt} showNote={tweaks.showTeacherNote} prev={() => setStep(0)} next={() => setStep(2)} />}
+        {step === 2 && <Step3 scenes={scenes} setSceneImage={setSceneImage} copiedIndex={copiedIndex} copyPrompt={copyPrompt} showNote={tweaks.showTeacherNote} prev={() => setStep(1)} next={() => setStep(3)} />}
+        {step === 3 && <Step4 story={story} scenes={scenes} setSceneField={setSceneField} kidName={kidName} showNote={tweaks.showTeacherNote} prev={() => setStep(2)} restart={restart} />}
+      </div>
+
+      <div className="footer-tip">
+        <span>FLOW</span>
+        小朋友的故事 → AI 拆 Prompt → 外部 AI 畫圖 → 組成繪本
+      </div>
+
+      <TweaksPanel title="Tweaks" defaultOpen={false}>
+        <TweakSection title="顯示">
+          <TweakToggle
+            label="顯示老師備忘"
+            checked={tweaks.showTeacherNote}
+            onChange={v => setTweak('showTeacherNote', v)}
+          />
+        </TweakSection>
+        <TweakSection title="跳到步驟">
+          <TweakButton onClick={() => setStep(0)}>① 說故事</TweakButton>
+          <TweakButton onClick={() => setStep(1)}>② 拆 Prompt</TweakButton>
+          <TweakButton onClick={() => setStep(2)}>③ 外部 AI 畫圖</TweakButton>
+          <TweakButton onClick={() => setStep(3)}>④ 組繪本</TweakButton>
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

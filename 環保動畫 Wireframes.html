@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>環保動畫 — 分鏡 Wireframes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Zen+Kurenaido&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --paper: #fafaf6;
+    --paper-2: #f0ede4;
+    --accent: #ff5a4a;
+    --accent-light: #ffd2cb;
+    --accent-bg: #fff4e8;
+    --hand: 'Zen Kurenaido', 'Gaegu', 'Comic Sans MS', cursive;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--hand); }
+
+  /* ── DC overrides for sketch vibe ───────────────────────────── */
+  .dc-toolbar { font-family: var(--mono) !important; }
+
+  /* ── Storyboard styles ─────────────────────────────────────── */
+  .sb-strip {
+    display: flex;
+    gap: 22px;
+    padding: 28px 32px;
+    align-items: flex-start;
+  }
+  .sb-panel { display: flex; flex-direction: column; gap: 6px; }
+  .sb-panel-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #666;
+    border-bottom: 1px dashed #999;
+    padding-bottom: 2px;
+    width: fit-content;
+  }
+  .sb-panel-frame {
+    border: 2.5px solid var(--ink);
+    background: var(--paper);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 3px 3px 0 var(--ink);
+    position: relative;
+  }
+  .sb-panel-title {
+    font-family: var(--hand);
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 6px;
+    line-height: 1.2;
+  }
+  .sb-panel-caption {
+    font-family: var(--hand);
+    font-size: 14px;
+    color: #444;
+    line-height: 1.3;
+    max-width: 320px;
+  }
+  .sb-panel-voice {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #666;
+    line-height: 1.4;
+    max-width: 320px;
+    margin-top: 4px;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .sb-panel-voice-label {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 9px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .sb-svg { display: block; width: 100%; height: 100%; font-family: var(--hand); }
+
+  /* ── Cover note ─────────────────────────────────────── */
+  .cover {
+    padding: 32px 40px 24px;
+    max-width: 880px;
+  }
+  .cover h1 {
+    font-family: var(--hand);
+    font-size: 38px;
+    margin: 0 0 4px;
+    letter-spacing: -0.5px;
+  }
+  .cover h1 em {
+    font-style: normal;
+    background: var(--accent-light);
+    padding: 0 8px;
+    box-decoration-break: clone;
+  }
+  .cover .meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .cover p { font-size: 16px; line-height: 1.6; margin: 6px 0; }
+  .cover ul { font-size: 15px; line-height: 1.7; padding-left: 20px; }
+  .cover .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; font-size: 13px; }
+  .cover .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .cover .legend i {
+    width: 14px; height: 14px; display: inline-block; border: 2px solid var(--ink); border-radius: 2px;
+  }
+
+  /* ── Direction header ──────────────────────────────────────── */
+  .dir-head {
+    padding: 4px 32px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    font-family: var(--hand);
+  }
+  .dir-head .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.08em;
+  }
+  .dir-head h2 { font-size: 28px; margin: 0; }
+  .dir-head .tag { font-size: 13px; color: #666; font-family: var(--mono); }
+
+  /* ── Tweaks compact ─────────────────────────────────────── */
+  .swatch-row { display: flex; gap: 8px; }
+  .swatch-row button {
+    width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--ink);
+    cursor: pointer; padding: 0;
+  }
+  .swatch-row button.active { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="storyboards.jsx"></script>
+<script type="text/babel" src="stories.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const { useEffect } = React;
+
+const PALETTES = /*EDITMODE-BEGIN*/{
+  "palette": "tomato",
+  "showVoiceOver": true,
+  "showCaptions": true
+}/*EDITMODE-END*/;
+
+const palettes = {
+  tomato:    { accent: '#ff5a4a', light: '#ffd2cb', bg: '#fff4e8' },
+  leaf:      { accent: '#3b8a4a', light: '#cdebd1', bg: '#f0f6e8' },
+  ocean:     { accent: '#2c7fb8', light: '#cbe2f0', bg: '#eaf3fa' },
+  sunshine:  { accent: '#e8a93b', light: '#fae6b8', bg: '#fff8e6' },
+};
+
+function Cover() {
+  return (
+    <div className="cover">
+      <div className="meta">WIREFRAME · STORYBOARD · 2026.05.04</div>
+      <h1>環保行動 / 回收 — <em>動畫分鏡探索</em></h1>
+      <p style={{ fontSize: 18, color: '#444', marginTop: 8 }}>
+        受眾：教室裡的小朋友（沒有手機）。播放方式：投影機 / 大螢幕，老師帶看。
+      </p>
+      <p style={{ marginTop: 14 }}>
+        以下是 <strong>4 個不同方向</strong>的故事板（每個 6 格分鏡，預估 60 秒）。
+        刻意用低保真手繪風，方便你在概念階段快速比較與選擇 — 確定方向後再投入精緻動畫。
+      </p>
+      <ul>
+        <li><strong>A. 〈瓶子的旅行〉</strong>—— 擬人化主角，敘事故事弧</li>
+        <li><strong>B. 〈分類大挑戰〉</strong>—— 互動問答，老師可暫停讓全班搶答</li>
+        <li><strong>C. 〈如果地球生病了〉</strong>—— 情感訴求，海龜 / 地球視角</li>
+        <li><strong>D. 〈一天五件小事〉</strong>—— 知識教學，可執行的具體行動清單</li>
+      </ul>
+      <div className="legend">
+        <span><i style={{ background: '#fff' }} />分鏡畫面（16:9）</span>
+        <span><i style={{ background: 'var(--accent-light)' }} />動作 / 主體</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>VO</span>
+        <span style={{ fontSize: 13, color: '#666' }}>= 旁白／配音稿</span>
+      </div>
+    </div>
+  );
+}
+
+function DirHead({ badge, title, tag }) {
+  return (
+    <div className="dir-head">
+      <span className="badge">{badge}</span>
+      <h2>{title}</h2>
+      <span className="tag">{tag}</span>
+    </div>
+  );
+}
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(PALETTES);
+  const p = palettes[tweaks.palette] || palettes.tomato;
+
+  useEffect(() => {
+    const r = document.documentElement.style;
+    r.setProperty('--accent', p.accent);
+    r.setProperty('--accent-light', p.light);
+    r.setProperty('--accent-bg', p.bg);
+  }, [p]);
+
+  // hide voice / caption lines via CSS toggle
+  useEffect(() => {
+    let css = '';
+    if (!tweaks.showVoiceOver) css += '.sb-panel-voice{display:none}';
+    if (!tweaks.showCaptions) css += '.sb-panel-caption{display:none}';
+    let el = document.getElementById('__tweak-css');
+    if (!el) { el = document.createElement('style'); el.id = '__tweak-css'; document.head.appendChild(el); }
+    el.textContent = css;
+  }, [tweaks.showVoiceOver, tweaks.showCaptions]);
+
+  return (
+    <>
+      <DesignCanvas defaultZoom={0.85}>
+        <DCSection id="cover" title="封面 / 設計脈絡">
+          <DCArtboard id="cover" label="設計脈絡" width={920} height={420}>
+            <Cover />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="A" title="方向 A — 〈瓶子的旅行〉">
+          <DCArtboard id="A" label="敘事故事 · 6 格分鏡" width={2120} height={420}>
+            <DirHead badge="A" title="瓶子的旅行" tag="NARRATIVE · 主角弧線 · ~60s" />
+            <StoryA />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="B" title="方向 B — 〈分類大挑戰〉">
+          <DCArtboard id="B" label="互動問答 · 6 格分鏡" width={2120} height={420}>
+            <DirHead badge="B" title="分類大挑戰" tag="INTERACTIVE QUIZ · 老師暫停 · ~60s" />
+            <StoryB />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="C" title="方向 C — 〈如果地球生病了〉">
+          <DCArtboard id="C" label="情感訴求 · 6 格分鏡" width={2120} height={420}>
+            <DirHead badge="C" title="如果地球生病了" tag="EMOTIONAL APPEAL · 海龜 / 地球 · ~60s" />
+            <StoryC />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="D" title="方向 D — 〈一天五件小事〉">
+          <DCArtboard id="D" label="知識教學 · 6 格分鏡" width={2120} height={420}>
+            <DirHead badge="D" title="一天五件小事" tag="EDUCATIONAL LIST · 可帶回家做 · ~60s" />
+            <StoryD />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks" defaultOpen={false}>
+        <TweakSection title="主色調">
+          <TweakRadio
+            value={tweaks.palette}
+            onChange={v => setTweak('palette', v)}
+            options={[
+              { value: 'tomato', label: '蕃茄紅' },
+              { value: 'leaf', label: '葉綠' },
+              { value: 'ocean', label: '海洋藍' },
+              { value: 'sunshine', label: '陽光黃' },
+            ]}
+          />
+        </TweakSection>
+        <TweakSection title="顯示">
+          <TweakToggle
+            label="顯示分鏡說明"
+            checked={tweaks.showCaptions}
+            onChange={v => setTweak('showCaptions', v)}
+          />
+          <TweakToggle
+            label="顯示旁白稿 (VO)"
+            checked={tweaks.showVoiceOver}
+            onChange={v => setTweak('showVoiceOver', v)}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
