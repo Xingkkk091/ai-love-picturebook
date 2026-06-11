@@ -408,7 +408,9 @@ function useVoiceRecorder(onDone) {
       const chunks = [];
       rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       rec.onstop = () => {
-        const blob = new Blob(chunks, { type: mime || 'audio/webm' });
+        // Use rec.mimeType (actual format used) instead of requested mime — they can differ on iOS
+        const actualMime = rec.mimeType || mime || 'audio/webm';
+        const blob = new Blob(chunks, { type: actualMime });
         const reader = new FileReader();
         reader.onload = () => onDone(reader.result);
         reader.readAsDataURL(blob);
@@ -511,7 +513,13 @@ function VoiceRecorder({ voice, onChange, big }) {
         )}
       </div>
       {voice && !recording && (
-        <audio src={voice} controls style={{ height: 32, width: '100%', maxWidth: 260 }} />
+        <div>
+          <audio src={voice} controls style={{ height: 32, width: '100%', maxWidth: 260 }}
+            onError={() => alert('⚠️ 這段錄音無法播放。\n\n請重新錄一次，或改用 Chrome / Edge 瀏覽器。')} />
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-2)', marginTop: 3 }}>
+            🔊 沒聲音？請確認手機未靜音、音量開大
+          </div>
+        </div>
       )}
     </div>
   );
