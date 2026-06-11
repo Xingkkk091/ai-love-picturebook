@@ -340,6 +340,15 @@ function saveStored(patch) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch }));
   } catch (e) {
     if (patch.scenes) {
+      // Try 1: keep voices, drop images only
+      try {
+        const noImg = patch.scenes.map(s => ({ ...s, image: null }));
+        const cur = loadStored();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch, scenes: noImg, _imagesDropped: true }));
+        window.dispatchEvent(new CustomEvent('images-dropped'));
+        return;
+      } catch {}
+      // Try 2: drop both
       try {
         const slim = patch.scenes.map(s => ({ ...s, image: null, voice: null }));
         const cur = loadStored();
@@ -375,7 +384,8 @@ function useVoiceRecorder(onDone) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       const mimes = ['audio/webm; codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
-      const mime = mimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+      const supported = typeof MediaRecorder.isTypeSupported === 'function' ? MediaRecorder.isTypeSupported.bind(MediaRecorder) : () => false;
+      const mime = mimes.find(m => supported(m)) || '';
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
       recRef.current = rec;
       const chunks = [];
@@ -396,7 +406,13 @@ function useVoiceRecorder(onDone) {
       }, 100);
       setRecording(true);
     } catch (e) {
-      alert('無法存取麥克風：' + (e.message || e) + '\n\n請允許瀏覽器使用麥克風。');
+      if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+        alert('🎤 麥克風被封鎖了！\n\n請點網址列左邊的鎖頭圖示 → 允許麥克風，然後重新整理頁面。');
+      } else if (e.name === 'NotFoundError') {
+        alert('找不到麥克風裝置，請確認有接上麥克風。');
+      } else {
+        alert('錄音失敗：' + (e.message || e) + '\n\n建議改用 Chrome 或 Edge 瀏覽器。');
+      }
     }
   }
   function stop() {
