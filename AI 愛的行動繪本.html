@@ -346,6 +346,8 @@ function saveStored(patch) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch, scenes: slim, _imagesDropped: true }));
         window.dispatchEvent(new CustomEvent('images-dropped'));
       } catch {}
+    } else {
+      window.dispatchEvent(new CustomEvent('images-dropped'));
     }
   }
 }
@@ -452,38 +454,77 @@ function useSpeech(lang, onText) {
 }
 
 // ── VoiceRecorder UI component ────────────────
-function VoiceRecorder({ voice, onChange }) {
+function VoiceRecorder({ voice, onChange, big }) {
   const { recording, elapsed, start, stop } = useVoiceRecorder(onChange);
+  const pad = big ? '10px 18px' : '4px 10px';
+  const fs = big ? 15 : 12;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontFamily: 'var(--mono)', fontSize: 11 }}>
-      {!recording ? (
-        <button
-          type="button"
-          onClick={start}
-          style={{ background: voice ? 'var(--leaf-light)' : 'var(--paper-2)', border: '2px solid var(--ink)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}
-        >
-          🎤 {voice ? '重新錄' : '錄音'}
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={stop}
-          style={{ background: 'var(--tomato)', color: 'var(--paper)', border: '2px solid var(--ink)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}
-        >
-          ⏺ 停止 ({elapsed.toFixed(1)}s)
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: big ? 12 : 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {!recording ? (
+          <button type="button" onClick={start}
+            style={{ background: voice ? 'var(--leaf)' : 'var(--paper-2)', color: voice ? 'var(--paper)' : 'var(--ink)', border: '2px solid var(--ink)', borderRadius: 10, padding: pad, cursor: 'pointer', fontSize: fs, fontFamily: 'var(--hand)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {voice ? '✅ 已錄音 · 重新錄' : '🎤 開始錄音'}
+          </button>
+        ) : (
+          <button type="button" onClick={stop}
+            style={{ background: 'var(--tomato)', color: 'var(--paper)', border: '2px solid var(--ink)', borderRadius: 10, padding: pad, cursor: 'pointer', fontSize: fs, fontFamily: 'var(--hand)', fontWeight: 700, animation: 'pulse 1s infinite', display: 'flex', alignItems: 'center', gap: 6 }}>
+            ⏺ 停止錄音 · {elapsed.toFixed(1)}s
+          </button>
+        )}
+        {voice && !recording && (
+          <button type="button" onClick={() => onChange(null)}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, opacity: 0.6 }} title="刪除錄音">🗑️</button>
+        )}
+      </div>
+      {voice && !recording && (
+        <audio src={voice} controls style={{ height: 32, width: '100%', maxWidth: 260 }} />
       )}
-      {voice && !recording ? (
-        <>
-          <audio src={voice} controls style={{ height: 28, maxWidth: 180 }} />
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14 }}
-            title="刪除錄音"
-          >🗑️</button>
-        </>
-      ) : null}
+    </div>
+  );
+}
+
+// ── GuidedRecording modal ─────────────────────
+function GuidedRecording({ scenes, setSceneField, onClose }) {
+  const [page, setPage] = useState(0);
+  const scene = scenes[page];
+  const recorded = scenes.filter(s => s.voice).length;
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: 'var(--paper)', border: '3px solid var(--ink)', borderRadius: 20, padding: 32, maxWidth: 520, width: '100%', boxShadow: '6px 6px 0 var(--ink)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '0.1em' }}>
+            第 {page + 1} / {scenes.length} 頁 · 已錄 {recorded}/{scenes.length}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {scenes.map((s, i) => (
+              <span key={i} onClick={() => setPage(i)} style={{ width: 14, height: 14, borderRadius: '50%', background: s.voice ? 'var(--leaf)' : i === page ? 'var(--tomato)' : '#ddd', border: '2px solid var(--ink)', cursor: 'pointer', display: 'inline-block' }} title={`第 ${i+1} 頁`} />
+            ))}
+          </div>
+        </div>
+
+        {scene.image && (
+          <div style={{ aspectRatio: '4/3', borderRadius: 12, overflow: 'hidden', border: '2px solid var(--ink)', marginBottom: 16 }}>
+            <img src={scene.image} alt={scene.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        )}
+
+        <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 8 }}>{scene.title}</div>
+        <div style={{ fontSize: 16, lineHeight: 1.8, color: 'var(--ink-2)', marginBottom: 16, padding: '12px 16px', background: 'var(--paper-2)', borderRadius: 10, border: '2px dashed rgba(26,34,51,0.2)' }}>
+          {scene.text}
+        </div>
+
+        <VoiceRecorder big voice={scene.voice} onChange={v => setSceneField(page, 'voice', v)} />
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'space-between' }}>
+          <button className="btn" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>← 上一頁</button>
+          <button className="btn" style={{ background: 'transparent', border: 'none', boxShadow: 'none', opacity: 0.5 }} onClick={onClose}>離開導覽</button>
+          {page < scenes.length - 1
+            ? <button className="btn primary" onClick={() => setPage(p => p + 1)}>下一頁 →</button>
+            : <button className="btn primary" onClick={onClose}>✅ 完成錄音！</button>
+          }
+        </div>
+      </div>
     </div>
   );
 }
@@ -510,62 +551,61 @@ const ART_STYLES = [
     svg: `<svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><path d="M8 28Q7 49 30 52Q53 49 52 28Z" fill="#B0C4DE" opacity="0.4"/><path d="M6 26Q5 47 28 50Q51 47 50 26Z" fill="#E8D5C0"/><ellipse cx="28" cy="26" rx="22" ry="7" fill="#D4C4AF"/><ellipse cx="28" cy="25" rx="18" ry="5" fill="#F5EDE0"/><ellipse cx="21.5" cy="22.5" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6" transform="rotate(-15,21.5,22.5)"/><ellipse cx="21" cy="22" rx="4" ry="2.2" fill="white" transform="rotate(-15,21,22)"/><ellipse cx="28.5" cy="20.5" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6"/><ellipse cx="28" cy="20" rx="4" ry="2.2" fill="white"/><ellipse cx="35.5" cy="22.5" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6" transform="rotate(15,35.5,22.5)"/><ellipse cx="35" cy="22" rx="4" ry="2.2" fill="white" transform="rotate(15,35,22)"/><ellipse cx="24.5" cy="27" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6"/><ellipse cx="24" cy="26.5" rx="4" ry="2.2" fill="white"/><ellipse cx="32.5" cy="27" rx="4" ry="2.2" fill="#d5d0c5" opacity="0.6"/><ellipse cx="32" cy="26.5" rx="4" ry="2.2" fill="white"/></svg>` },
 ];
 
-async function callGemini(prompt, key, retryCount = 0) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${encodeURIComponent(key)}`;
-  const res = await fetch(url, {
+async function callGroq(prompt, key, retryCount = 0) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+    }),
   });
   if (!res.ok) {
     const txt = await res.text();
     let code = null;
     try { code = JSON.parse(txt)?.error?.code; } catch {}
-    if (code === 429 && retryCount < 2) {
-      // RPM limit hit — wait and retry automatically
-      const waitSec = (retryCount + 1) * 30;
-      await new Promise(r => setTimeout(r, waitSec * 1000));
-      return callGemini(prompt, key, retryCount + 1);
+    if ((res.status === 429) && retryCount < 2) {
+      await new Promise(r => setTimeout(r, (retryCount + 1) * 20000));
+      return callGroq(prompt, key, retryCount + 1);
     }
-    let msg = 'Gemini error: ' + txt.slice(0, 200);
-    try {
-      if (code === 429) msg = '📵 請求太頻繁，已自動重試 2 次仍失敗。請等 1 分鐘後再試，或換一個 API Key。';
-      else if (code === 403 || code === 401) msg = '🔑 API Key 無效，請確認 Key 是從 aistudio.google.com/apikey 複製的，沒有多餘空格。';
-    } catch {}
+    let msg = 'Groq error ' + res.status + ': ' + txt.slice(0, 200);
+    if (res.status === 429) msg = '📵 請求太頻繁，請等 20 秒後再試。';
+    else if (res.status === 401) msg = '🔑 Groq API Key 無效，請確認從 console.groq.com 複製的 Key 正確。';
     throw new Error(msg);
   }
   const data = await res.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return data?.choices?.[0]?.message?.content || '';
 }
 
 async function callClaude(prompt) {
   if (window.claude && window.claude.complete) {
     return window.claude.complete(prompt);
   }
-  const key = (localStorage.getItem('GEMINI_KEY') || '').trim();
+  const key = (localStorage.getItem('GROQ_KEY') || '').trim();
   if (!key) throw new Error('NEED_KEY');
-  return callGemini(prompt, key);
+  return callGroq(prompt, key);
 }
 
 function hasAI() {
-  return !!(window.claude && window.claude.complete) || !!(localStorage.getItem('GEMINI_KEY') || '').trim();
+  return !!(window.claude && window.claude.complete) || !!(localStorage.getItem('GROQ_KEY') || '').trim();
 }
 
 function ApiKeyPanel({ onSaved }) {
-  const [key, setKey] = React.useState(localStorage.getItem('GEMINI_KEY') || '');
+  const [key, setKey] = React.useState(localStorage.getItem('GROQ_KEY') || '');
   const [saved, setSaved] = React.useState(false);
   const [testing, setTesting] = React.useState(false);
   const [testResult, setTestResult] = React.useState(null);
 
   function save() {
-    localStorage.setItem('GEMINI_KEY', key.trim());
+    localStorage.setItem('GROQ_KEY', key.trim());
     setSaved(true);
     setTestResult(null);
     setTimeout(() => setSaved(false), 1800);
     if (onSaved) onSaved();
   }
   function clear() {
-    localStorage.removeItem('GEMINI_KEY');
+    localStorage.removeItem('GROQ_KEY');
     setKey('');
     setTestResult(null);
     if (onSaved) onSaved();
@@ -576,28 +616,24 @@ function ApiKeyPanel({ onSaved }) {
     setTesting(true);
     setTestResult(null);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${encodeURIComponent(k)}`;
-
-      const res = await fetch(url, {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: '回答「OK」兩個字就好' }] }] }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${k}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: '請回答「OK」兩個字就好' }] }),
       });
       if (res.ok) {
-        setTestResult({ ok: true, msg: '✅ Key 有效，可以使用！' });
-        localStorage.setItem('GEMINI_KEY', k);
+        localStorage.setItem('GROQ_KEY', k);
         if (onSaved) onSaved();
+        setTestResult({ ok: true, msg: '✅ Key 有效，可以使用！' });
+      } else if (res.status === 429) {
+        // 429 = 限速，不是 key 壞掉 → 照樣存，讓用戶繼續
+        localStorage.setItem('GROQ_KEY', k);
+        if (onSaved) onSaved();
+        setTestResult({ ok: true, msg: '⚡ Key 有效！只是當下請求太頻繁，稍等幾秒再讓 AI 拆畫面就好。' });
+      } else if (res.status === 401) {
+        setTestResult({ ok: false, msg: '❌ Key 無效，請重新從 console.groq.com 複製（以 gsk_ 開頭）' });
       } else {
-        const txt = await res.text();
-        let msg = '❌ Key 無效';
-        try {
-          const err = JSON.parse(txt);
-          const code = err?.error?.code;
-          if (code === 429) msg = '📵 此 Key 今日配額已用完，請換另一個 Google 帳號的 Key';
-          else if (code === 400) msg = '❌ Key 格式錯誤，請重新複製';
-          else if (code === 403 || code === 401) msg = '❌ Key 無效或沒有權限';
-        } catch {}
-        setTestResult({ ok: false, msg });
+        setTestResult({ ok: false, msg: `❌ 伺服器錯誤 ${res.status}，請稍後再試` });
       }
     } catch (e) {
       setTestResult({ ok: false, msg: '❌ 網路錯誤，請確認網路連線' });
@@ -608,15 +644,17 @@ function ApiKeyPanel({ onSaved }) {
   return (
     <div style={{ marginTop: 16, padding: 16, background: 'var(--sky-light)', border: '2px solid var(--ink)', borderRadius: 12 }}>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.08em', marginBottom: 8 }}>
-        🔑 設定 GEMINI API 金鑰（一次設定，瀏覽器記住）
+        🔑 設定 Groq API 金鑰（免費、不需信用卡）
       </div>
-      <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
-        到 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700 }}>Google AI Studio</a> 免費申請一個 API Key，貼到下面。金鑰只存在你的瀏覽器，不會傳到別處。
+      <div style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
+        1. 到 <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700 }}>console.groq.com/keys</a> 用 Google 帳號登入<br/>
+        2. 點「Create API Key」→ 複製 Key<br/>
+        3. 貼到下面，按「🧪 測試」確認有效
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <input
           type="password"
-          placeholder="貼上 API Key…"
+          placeholder="貼上 Groq API Key（gsk_...）"
           value={key}
           onChange={e => { setKey(e.target.value); setTestResult(null); }}
           style={{ flex: 1, minWidth: 180, padding: '10px 12px', border: '2px solid var(--ink)', borderRadius: 8, fontFamily: 'var(--mono)', fontSize: 13 }}
@@ -625,10 +663,10 @@ function ApiKeyPanel({ onSaved }) {
           {testing ? '測試中…' : '🧪 測試'}
         </button>
         <button className="btn" onClick={save} disabled={!key.trim()}>{saved ? '✓ 已儲存' : '儲存'}</button>
-        {localStorage.getItem('GEMINI_KEY') ? <button className="btn" onClick={clear}>清除</button> : null}
+        {localStorage.getItem('GROQ_KEY') ? <button className="btn" onClick={clear}>清除</button> : null}
       </div>
       {testResult && (
-        <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: testResult.ok ? '#d4edda' : '#fde8e8', fontSize: 13, fontWeight: 600 }}>
+        <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: testResult.ok ? (testResult.msg.startsWith('⚡') ? '#fff3cd' : '#d4edda') : '#fde8e8', fontSize: 13, fontWeight: 600 }}>
           {testResult.msg}
         </div>
       )}
@@ -858,7 +896,7 @@ function Step2({ story, scenes, setScenes, setSceneField, busy, generateScenes, 
 
       <div className="nav">
         <button className="btn" onClick={prev}>← 改故事</button>
-        <button className="btn primary big" disabled={scenes.length === 0} onClick={next}>下一步 → 去畫圖</button>
+        <button className="btn primary big" disabled={scenes.length === 0 || busy} onClick={next}>下一步 → 去畫圖</button>
       </div>
     </>
   );
@@ -915,10 +953,11 @@ function Step3({ scenes, setSceneImage, copiedIndex, copyPrompt, showNote, prev,
 }
 
 function SceneUpload({ scene, index, setSceneImage, copyPrompt, copied }) {
-  const inputRef = useRef(null);
+  const inputId = `file-upload-${index}`;
   function handleFile(e) {
     const f = e.target.files[0];
     if (!f) return;
+    e.target.value = '';
     if (f.size > 2 * 1024 * 1024) {
       if (!confirm(`圖片太大（${(f.size / 1024 / 1024).toFixed(1)} MB），可能造成存儲失敗。\n建議壓縮到 2MB 以內。\n\n要繼續上傳嗎？`)) return;
     }
@@ -928,6 +967,7 @@ function SceneUpload({ scene, index, setSceneImage, copyPrompt, copied }) {
   }
   return (
     <div className="upload-cell">
+      <input id={inputId} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <span className="scene-no">畫面 {index + 1}</span>
         <button onClick={() => copyPrompt(scene.prompt, index)} style={{ border: '1.5px solid var(--ink)', background: copied ? 'var(--leaf)' : 'var(--paper)', color: copied ? 'var(--paper)' : 'var(--ink)', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer' }}>
@@ -935,7 +975,7 @@ function SceneUpload({ scene, index, setSceneImage, copyPrompt, copied }) {
         </button>
       </div>
       <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.4 }}>{scene.title}</div>
-      <div className={`upload-zone ${scene.image ? 'has-image' : ''}`} onClick={() => inputRef.current?.click()}>
+      <label htmlFor={inputId} className={`upload-zone ${scene.image ? 'has-image' : ''}`} style={{ cursor: 'pointer' }}>
         {scene.image ? (
           <img src={scene.image} alt={`scene ${index + 1}`} />
         ) : (
@@ -944,11 +984,10 @@ function SceneUpload({ scene, index, setSceneImage, copyPrompt, copied }) {
             點這裡上傳<br/>AI 畫好的圖
           </div>
         )}
-        <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} />
-      </div>
+      </label>
       {scene.image ? (
         <div className="actions">
-          <button onClick={() => inputRef.current?.click()}>更換</button>
+          <label htmlFor={inputId} style={{ flex: 1, padding: '6px 8px', fontSize: 12, fontFamily: 'var(--mono)', border: '1.5px solid var(--ink)', background: 'var(--paper)', borderRadius: 6, cursor: 'pointer', textAlign: 'center' }}>更換</label>
           <button onClick={() => setSceneImage(index, null)}>刪除</button>
         </div>
       ) : null}
@@ -1067,7 +1106,7 @@ function PlayMode({ scenes, kidName, onClose }) {
       const vs = speechSynthesis.getVoices();
       const v = vs.find(x => /zh-TW|cmn-Hant/i.test(x.lang))
              || vs.find(x => /zh|cmn|Chinese|Mandarin/i.test(x.lang + x.name))
-             || vs[0] || null;
+             || null;
       setVoice(v);
     }
     pick();
@@ -1076,10 +1115,11 @@ function PlayMode({ scenes, kidName, onClose }) {
   }, []);
 
   const audioRef = React.useRef(null);
+  const safetyRef = React.useRef(null);
 
   function speak(text, voiceUrl, onEnd) {
     let done = false;
-    const finish = () => { if (done) return; done = true; onEnd(); };
+    const finish = () => { if (done) return; done = true; if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null; } onEnd(); };
 
     // Priority 1: kid's own recording
     if (voiceOn && voiceUrl) {
@@ -1090,13 +1130,12 @@ function PlayMode({ scenes, kidName, onClose }) {
         audio.onended = finish;
         audio.onerror = finish;
         audio.play().catch(finish);
-        // safety net
-        timerRef.current = setTimeout(finish, Math.max(15000, text.length * 600));
+        safetyRef.current = setTimeout(finish, Math.max(15000, text.length * 600));
         return;
       } catch { /* fall through to TTS */ }
     }
 
-    if (!voiceOn || typeof SpeechSynthesisUtterance === 'undefined') {
+    if (!voiceOn || typeof SpeechSynthesisUtterance === 'undefined' || !voice) {
       // No voice: read time based on length (300ms per char, min 4.5s)
       timerRef.current = setTimeout(finish, Math.max(4500, text.length * 300));
       return;
@@ -1111,14 +1150,14 @@ function PlayMode({ scenes, kidName, onClose }) {
     u.onerror = finish;
     utterRef.current = u;
     speechSynthesis.speak(u);
-    // Generous safety net (only kicks in if onend never fires)
-    timerRef.current = setTimeout(finish, Math.max(12000, text.length * 600));
+    safetyRef.current = setTimeout(finish, Math.max(12000, text.length * 600));
   }
 
   function stopAll() {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
     if (audioRef.current) { try { audioRef.current.pause(); } catch {} audioRef.current = null; }
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null; }
   }
 
   // page advancement
@@ -1136,7 +1175,7 @@ function PlayMode({ scenes, kidName, onClose }) {
       }, 1400);
     });
     return stopAll;
-  }, [page, playing, voiceOn]);
+  }, [page, playing, voiceOn, scenes]);
 
   React.useEffect(() => () => stopAll(), []);
 
@@ -1353,7 +1392,7 @@ async function exportVideo(scenes, kidName, onProgress) {
       const t = Math.min(1, elapsed / dur);
       drawScene(i, t);
       if (elapsed >= dur) break;
-      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => { const t = setTimeout(r, 16); requestAnimationFrame(() => { clearTimeout(t); r(); }); });
     }
   }
   recorder.stop();
@@ -1370,6 +1409,8 @@ function Step4({ story, scenes, setSceneField, kidName, showNote, prev, restart 
   const [exporting, setExporting] = useState(false);
   const [videoExporting, setVideoExporting] = useState(false);
   const [videoStatus, setVideoStatus] = useState('');
+  const [guiding, setGuiding] = useState(false);
+  const recordedCount = scenes.filter(s => s.voice).length;
 
   async function exportBook() {
     setExporting(true);
@@ -1453,13 +1494,24 @@ function Step4({ story, scenes, setSceneField, kidName, showNote, prev, restart 
                 )}
               </div>
               <div className="page-text">{s.text}</div>
-              <VoiceRecorder voice={s.voice} onChange={(v) => setSceneField(i, 'voice', v)} />
+              <VoiceRecorder big voice={s.voice} onChange={(v) => setSceneField(i, 'voice', v)} />
             </div>
           ))}
         </div>
 
-        <div className="lesson-box" style={{ marginTop: 14, fontSize: 13 }}>
-          🎤 <strong>每一頁都可以錄音</strong>：小朋友念故事，按 ⏺ 停止。錄好後匯出 MP4 就會有自己的聲音！</div>
+        <div style={{ marginTop: 18, padding: '14px 18px', background: recordedCount === scenes.length ? '#d4edda' : 'var(--sun-light)', border: '2px solid var(--ink)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>🎤 錄音進度：{recordedCount}/{scenes.length} 頁</span>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {scenes.map((s, i) => (
+                <span key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: s.voice ? 'var(--leaf)' : '#ddd', border: '2px solid var(--ink)', display: 'inline-block' }} title={`第 ${i+1} 頁${s.voice ? '（已錄）' : '（未錄）'}`} />
+              ))}
+            </div>
+          </div>
+          <button className="btn primary" onClick={() => setGuiding(true)} style={{ fontSize: 13, padding: '8px 16px' }}>
+            🎙️ 逐頁錄音導覽
+          </button>
+        </div>
       </div>
 
       <div className="lesson-box">
@@ -1471,10 +1523,10 @@ function Step4({ story, scenes, setSceneField, kidName, showNote, prev, restart 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn primary big" onClick={() => setPlaying(true)} disabled={scenes.every(s => !s.image)}>📽️ 播放繪本</button>
           <button className="btn" onClick={exportMP4} disabled={videoExporting || scenes.length === 0}>
-            {videoExporting ? `🎬 ${videoStatus || '錄製中…'}` : '🎬 匯出影片（MP4）'}
+            {videoExporting ? `🎬 ${videoStatus || '錄製中…'}` : `🎬 匯出影片${recordedCount > 0 ? `（含 ${recordedCount} 頁錄音）` : ''}`}
           </button>
           <button className="btn" onClick={exportBook} disabled={exporting || scenes.length === 0}>
-            {exporting ? '打包中…' : '📦 匯出繪本'}
+            {exporting ? '打包中…' : `📦 匯出繪本${recordedCount > 0 ? `（含錄音）` : ''}`}
           </button>
           <button className="btn" onClick={() => window.print()}>🖨️ 列印</button>
           <button className="btn" onClick={restart}>🔄 換個小朋友</button>
@@ -1484,6 +1536,7 @@ function Step4({ story, scenes, setSceneField, kidName, showNote, prev, restart 
         <div style={{ textAlign: 'center', marginTop: 10, fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--leaf)' }}>{videoStatus}</div>
       ) : null}
       {playing ? <PlayMode scenes={scenes} kidName={kidName} onClose={() => setPlaying(false)} /> : null}
+      {guiding ? <GuidedRecording scenes={scenes} setSceneField={setSceneField} onClose={() => setGuiding(false)} /> : null}
     </>
   );
 }
