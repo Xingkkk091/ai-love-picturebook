@@ -400,7 +400,8 @@ function useVoiceRecorder(onDone) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const mimes = ['audio/webm; codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+      // mp4 first: has proper duration metadata; webm from MediaRecorder often lacks it
+      const mimes = ['audio/mp4', 'audio/webm; codecs=opus', 'audio/webm', 'audio/ogg'];
       const supported = typeof MediaRecorder.isTypeSupported === 'function' ? MediaRecorder.isTypeSupported.bind(MediaRecorder) : () => false;
       const mime = mimes.find(m => supported(m)) || '';
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
@@ -515,6 +516,7 @@ function VoiceRecorder({ voice, onChange, big }) {
       {voice && !recording && (
         <div>
           <audio src={voice} controls style={{ height: 32, width: '100%', maxWidth: 260 }}
+            onLoadedMetadata={e => { e.target.currentTime = 0; }}
             onError={() => alert('⚠️ 這段錄音無法播放。\n\n請重新錄一次，或改用 Chrome / Edge 瀏覽器。')} />
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-2)', marginTop: 3 }}>
             🔊 沒聲音？請確認手機未靜音、音量開大
