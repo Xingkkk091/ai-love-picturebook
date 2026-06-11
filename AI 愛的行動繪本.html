@@ -327,32 +327,49 @@ const TWEAKS_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 // ── Persistent state hook ──────────────────────
-// localStorage-backed useState. Survives page refresh.
-// Skips writing when the value is the initial value (avoid clobbering on first mount).
 const STORAGE_KEY = 'love-act-state-v1';
+const VOICES_KEY  = 'love-act-voices-v1';  // separate key so images can't evict voices
+
 function loadStored() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    // Merge voices back from separate key
+    try {
+      const voices = JSON.parse(localStorage.getItem(VOICES_KEY) || 'null');
+      if (data.scenes && Array.isArray(voices)) {
+        data.scenes = data.scenes.map((s, i) => ({ ...s, voice: voices[i] ?? s.voice ?? null }));
+      }
+    } catch {}
+    return data;
+  }
   catch { return {}; }
 }
+
+function saveVoices(scenes) {
+  try {
+    localStorage.setItem(VOICES_KEY, JSON.stringify(scenes.map(s => s.voice || null)));
+  } catch {}
+}
+
 function saveStored(patch) {
+  // Always save voices to their own key first (immune to image overflow)
+  if (patch.scenes) saveVoices(patch.scenes);
+
+  // Save main state without voices (voices already stored separately)
+  const patchNoVoice = patch.scenes
+    ? { ...patch, scenes: patch.scenes.map(s => ({ ...s, voice: null })) }
+    : patch;
+
   try {
     const cur = loadStored();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patchNoVoice }));
   } catch (e) {
     if (patch.scenes) {
-      // Try 1: keep voices, drop images only
+      // Try 1: drop images, keep text
       try {
-        const noImg = patch.scenes.map(s => ({ ...s, image: null }));
+        const slim = patchNoVoice.scenes.map(s => ({ ...s, image: null }));
         const cur = loadStored();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch, scenes: noImg, _imagesDropped: true }));
-        window.dispatchEvent(new CustomEvent('images-dropped'));
-        return;
-      } catch {}
-      // Try 2: drop both
-      try {
-        const slim = patch.scenes.map(s => ({ ...s, image: null, voice: null }));
-        const cur = loadStored();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch, scenes: slim, _imagesDropped: true }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patchNoVoice, scenes: slim, _imagesDropped: true }));
         window.dispatchEvent(new CustomEvent('images-dropped'));
       } catch {}
     } else {
@@ -368,7 +385,7 @@ function useStoredState(key, initial) {
   useEffect(() => { saveStored({ [key]: val }); }, [key, val]);
   return [val, setVal];
 }
-function clearStored() { try { localStorage.removeItem(STORAGE_KEY); } catch {} }
+function clearStored() { try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(VOICES_KEY); } catch {} }
 
 // ── Voice recording hook ──────────────────────
 function useVoiceRecorder(onDone) {
@@ -968,17 +985,30 @@ function Step3({ scenes, setSceneImage, copiedIndex, copyPrompt, showNote, prev,
   );
 }
 
+function compressImage(dataUrl, maxPx, quality, done) {
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(maxPx / img.width, maxPx / img.height, 1);
+    const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    done(c.toDataURL('image/jpeg', quality));
+  };
+  img.onerror = () => done(dataUrl); // fallback: use original
+  img.src = dataUrl;
+}
+
 function SceneUpload({ scene, index, setSceneImage, copyPrompt, copied }) {
   const inputId = `file-upload-${index}`;
   function handleFile(e) {
     const f = e.target.files[0];
     if (!f) return;
     e.target.value = '';
-    if (f.size > 2 * 1024 * 1024) {
-      if (!confirm(`圖片太大（${(f.size / 1024 / 1024).toFixed(1)} MB），可能造成存儲失敗。\n建議壓縮到 2MB 以內。\n\n要繼續上傳嗎？`)) return;
-    }
     const reader = new FileReader();
-    reader.onload = ev => setSceneImage(index, ev.target.result);
+    reader.onload = ev => {
+      compressImage(ev.target.result, 1200, 0.82, compressed => setSceneImage(index, compressed));
+    };
     reader.readAsDataURL(f);
   }
   return (
