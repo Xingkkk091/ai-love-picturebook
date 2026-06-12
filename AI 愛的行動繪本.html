@@ -391,15 +391,35 @@ function clearStored() { try { localStorage.removeItem(STORAGE_KEY); localStorag
 function useVoiceRecorder(onDone) {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [volume, setVolume] = useState(0);
   const recRef = useRef(null);
   const streamRef = useRef(null);
   const startRef = useRef(0);
   const tickRef = useRef(null);
+  const analyserRef = useRef(null);
+  const volRafRef = useRef(null);
 
   async function start() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      // volume meter via AnalyserNode
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const src = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        src.connect(analyser);
+        analyserRef.current = { analyser, ctx };
+        const buf = new Uint8Array(analyser.frequencyBinCount);
+        function rafTick() {
+          analyser.getByteFrequencyData(buf);
+          const avg = buf.reduce((a, b) => a + b, 0) / buf.length;
+          setVolume(Math.min(100, avg * 2.5));
+          volRafRef.current = requestAnimationFrame(rafTick);
+        }
+        rafTick();
+      } catch {}
       // mp4 first: has proper duration metadata; webm from MediaRecorder often lacks it
       const mimes = ['audio/mp4', 'audio/webm; codecs=opus', 'audio/webm', 'audio/ogg'];
       const supported = typeof MediaRecorder.isTypeSupported === 'function' ? MediaRecorder.isTypeSupported.bind(MediaRecorder) : () => false;
@@ -409,6 +429,9 @@ function useVoiceRecorder(onDone) {
       const chunks = [];
       rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       rec.onstop = () => {
+        if (volRafRef.current) { cancelAnimationFrame(volRafRef.current); volRafRef.current = null; }
+        if (analyserRef.current) { try { analyserRef.current.ctx.close(); } catch {} analyserRef.current = null; }
+        setVolume(0);
         // Use rec.mimeType (actual format used) instead of requested mime — they can differ on iOS
         const actualMime = rec.mimeType || mime || 'audio/webm';
         const blob = new Blob(chunks, { type: actualMime });
@@ -436,17 +459,20 @@ function useVoiceRecorder(onDone) {
     }
   }
   function stop() {
-    if (recRef.current && recRef.current.state !== 'inactive') {
-      recRef.current.stop();
-    }
+    if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop();
+    if (volRafRef.current) { cancelAnimationFrame(volRafRef.current); volRafRef.current = null; }
+    if (analyserRef.current) { try { analyserRef.current.ctx.close(); } catch {} analyserRef.current = null; }
+    setVolume(0);
     setRecording(false);
   }
   useEffect(() => () => {
     if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop();
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     if (tickRef.current) clearInterval(tickRef.current);
+    if (volRafRef.current) cancelAnimationFrame(volRafRef.current);
+    if (analyserRef.current) { try { analyserRef.current.ctx.close(); } catch {} }
   }, []);
-  return { recording, elapsed, start, stop };
+  return { recording, elapsed, volume, start, stop };
 }
 
 // ── Speech recognition hook (for story input) ──
@@ -490,8 +516,28 @@ function useSpeech(lang, onText) {
 }
 
 // ── VoiceRecorder UI component ────────────────
+function VolumeBars({ volume, big }) {
+  const heights = [0.4, 0.7, 1, 0.7, 0.4];
+  const maxH = big ? 28 : 20;
+  const w = big ? 5 : 4;
+  const color = volume > 65 ? '#22c55e' : volume > 25 ? '#f59e0b' : '#ef4444';
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: big ? 3 : 2, height: maxH }}>
+      {heights.map((scale, i) => (
+        <div key={i} style={{
+          width: w,
+          height: Math.max(3, (volume / 100) * maxH * scale),
+          background: color,
+          borderRadius: 3,
+          transition: 'height 60ms ease, background 150ms ease',
+        }} />
+      ))}
+    </div>
+  );
+}
+
 function VoiceRecorder({ voice, onChange, big, onRecordingChange }) {
-  const { recording, elapsed, start, stop } = useVoiceRecorder(onChange);
+  const { recording, elapsed, volume, start, stop } = useVoiceRecorder(onChange);
   React.useEffect(() => { if (onRecordingChange) onRecordingChange(recording); }, [recording]);
   const pad = big ? '10px 18px' : '4px 10px';
   const fs = big ? 15 : 12;
@@ -509,6 +555,7 @@ function VoiceRecorder({ voice, onChange, big, onRecordingChange }) {
             ⏺ 停止錄音 · {elapsed.toFixed(1)}s
           </button>
         )}
+        {recording && <VolumeBars volume={volume} big={big} />}
         {voice && !recording && (
           <button type="button" onClick={() => onChange(null)}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, opacity: 0.6 }} title="刪除錄音">🗑️</button>
