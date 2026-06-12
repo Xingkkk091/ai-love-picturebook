@@ -490,8 +490,9 @@ function useSpeech(lang, onText) {
 }
 
 // ── VoiceRecorder UI component ────────────────
-function VoiceRecorder({ voice, onChange, big }) {
+function VoiceRecorder({ voice, onChange, big, onRecordingChange }) {
   const { recording, elapsed, start, stop } = useVoiceRecorder(onChange);
+  React.useEffect(() => { if (onRecordingChange) onRecordingChange(recording); }, [recording]);
   const pad = big ? '10px 18px' : '4px 10px';
   const fs = big ? 15 : 12;
   return (
@@ -530,6 +531,7 @@ function VoiceRecorder({ voice, onChange, big }) {
 // ── GuidedRecording modal ─────────────────────
 function GuidedRecording({ scenes, setSceneField, onClose }) {
   const [page, setPage] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
   const scene = scenes[page];
   const recorded = scenes.filter(s => s.voice).length;
   return (
@@ -538,10 +540,11 @@ function GuidedRecording({ scenes, setSceneField, onClose }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '0.1em' }}>
             第 {page + 1} / {scenes.length} 頁 · 已錄 {recorded}/{scenes.length}
+            {isRecording && <span style={{ color: 'var(--tomato)', marginLeft: 8 }}>● 錄音中…</span>}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {scenes.map((s, i) => (
-              <span key={i} onClick={() => setPage(i)} style={{ width: 14, height: 14, borderRadius: '50%', background: s.voice ? 'var(--leaf)' : i === page ? 'var(--tomato)' : '#ddd', border: '2px solid var(--ink)', cursor: 'pointer', display: 'inline-block' }} title={`第 ${i+1} 頁`} />
+              <span key={i} onClick={() => !isRecording && setPage(i)} style={{ width: 14, height: 14, borderRadius: '50%', background: s.voice ? 'var(--leaf)' : i === page ? 'var(--tomato)' : '#ddd', border: '2px solid var(--ink)', cursor: isRecording ? 'not-allowed' : 'pointer', display: 'inline-block', opacity: isRecording && i !== page ? 0.4 : 1 }} title={isRecording ? '請先停止錄音' : `第 ${i+1} 頁`} />
             ))}
           </div>
         </div>
@@ -557,14 +560,14 @@ function GuidedRecording({ scenes, setSceneField, onClose }) {
           {scene.text}
         </div>
 
-        <VoiceRecorder big voice={scene.voice} onChange={v => setSceneField(page, 'voice', v)} />
+        <VoiceRecorder big voice={scene.voice} onChange={v => setSceneField(page, 'voice', v)} onRecordingChange={setIsRecording} />
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'space-between' }}>
-          <button className="btn" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>← 上一頁</button>
-          <button className="btn" style={{ background: 'transparent', border: 'none', boxShadow: 'none', opacity: 0.5 }} onClick={onClose}>離開導覽</button>
+          <button className="btn" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isRecording}>← 上一頁</button>
+          <button className="btn" style={{ background: 'transparent', border: 'none', boxShadow: 'none', opacity: 0.5 }} onClick={onClose} disabled={isRecording}>離開導覽</button>
           {page < scenes.length - 1
-            ? <button className="btn primary" onClick={() => setPage(p => p + 1)}>下一頁 →</button>
-            : <button className="btn primary" onClick={onClose}>✅ 完成錄音！</button>
+            ? <button className="btn primary" onClick={() => setPage(p => p + 1)} disabled={isRecording}>下一頁 →</button>
+            : <button className="btn primary" onClick={onClose} disabled={isRecording}>✅ 完成錄音！</button>
           }
         </div>
       </div>
@@ -1221,11 +1224,11 @@ function PlayMode({ scenes, kidName, onClose }) {
     if (!playing || !scene) return;
     stopAll();
     speak(scene.text || '', scene.voice, () => {
-      // small pause then advance
       timerRef.current = setTimeout(() => {
         setPage(p => {
           if (p < scenes.length - 1) return p + 1;
-          setPlaying(false);
+          // Don't call setPlaying inside a state updater (React anti-pattern)
+          requestAnimationFrame(() => setPlaying(false));
           return p;
         });
       }, 1400);
@@ -1302,7 +1305,8 @@ async function exportVideo(scenes, kidName, onProgress) {
     'video/webm; codecs=vp8',
     'video/webm',
   ];
-  const mimeType = mimeOptions.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  const isSupportedVideo = (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') ? (t => MediaRecorder.isTypeSupported(t)) : () => false;
+  const mimeType = mimeOptions.find(t => isSupportedVideo(t));
   if (!mimeType) throw new Error('您的瀏覽器不支援影片錄製，請改用 Chrome 或 Edge');
 
   const canvas = document.createElement('canvas');
