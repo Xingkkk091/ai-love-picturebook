@@ -472,7 +472,7 @@ function useVoiceRecorder(onDone) {
     if (volRafRef.current) cancelAnimationFrame(volRafRef.current);
     if (analyserRef.current) { try { analyserRef.current.ctx.close(); } catch {} }
   }, []);
-  return { recording, elapsed, volume, start, stop };
+  return { recording, elapsed, volume, analyserRef, start, stop };
 }
 
 // ── Speech recognition hook (for story input) ──
@@ -516,28 +516,51 @@ function useSpeech(lang, onText) {
 }
 
 // ── VoiceRecorder UI component ────────────────
-function VolumeBars({ volume, big }) {
-  const heights = [0.4, 0.7, 1, 0.7, 0.4];
-  const maxH = big ? 28 : 20;
-  const w = big ? 5 : 4;
-  const color = volume > 65 ? '#22c55e' : volume > 25 ? '#f59e0b' : '#ef4444';
+function WaveformVisualizer({ analyserRef, recording, big }) {
+  const canvasRef = React.useRef(null);
+  const rafRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!recording) { if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; } return; }
+    const canvas = canvasRef.current;
+    if (!canvas || !analyserRef.current) return;
+    const { analyser } = analyserRef.current;
+    const bufLen = analyser.frequencyBinCount;
+    const data = new Uint8Array(bufLen);
+    function draw() {
+      rafRef.current = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(data);
+      const W = canvas.width, H = canvas.height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, W, H);
+      const bars = big ? 48 : 32;
+      const gap = 2;
+      const bw = (W - gap * (bars - 1)) / bars;
+      for (let i = 0; i < bars; i++) {
+        const idx = Math.floor((i / bars) * bufLen * 0.65);
+        const v = data[idx] / 255;
+        const bh = Math.max(2, v * (H - 4));
+        const r = v > 0.6 ? 255 : Math.round((v / 0.6) * 200);
+        const g = v < 0.6 ? 220 : Math.round((1 - (v - 0.6) / 0.4) * 220);
+        ctx.fillStyle = `rgb(${r},${g},30)`;
+        ctx.beginPath();
+        try { ctx.roundRect(i * (bw + gap), H - bh - 2, bw, bh, [2, 2, 0, 0]); }
+        catch { ctx.rect(i * (bw + gap), H - bh - 2, bw, bh); }
+        ctx.fill();
+      }
+    }
+    draw();
+    return () => { if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; } };
+  }, [recording]);
+  const W = big ? 240 : 150, H = big ? 52 : 36;
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: big ? 3 : 2, height: maxH }}>
-      {heights.map((scale, i) => (
-        <div key={i} style={{
-          width: w,
-          height: Math.max(3, (volume / 100) * maxH * scale),
-          background: color,
-          borderRadius: 3,
-          transition: 'height 60ms ease, background 150ms ease',
-        }} />
-      ))}
-    </div>
+    <canvas ref={canvasRef} width={W} height={H}
+      style={{ borderRadius: 8, background: '#1a1a1a', display: 'block', border: '1.5px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
   );
 }
 
 function VoiceRecorder({ voice, onChange, big, onRecordingChange }) {
-  const { recording, elapsed, volume, start, stop } = useVoiceRecorder(onChange);
+  const { recording, elapsed, analyserRef, start, stop } = useVoiceRecorder(onChange);
   React.useEffect(() => { if (onRecordingChange) onRecordingChange(recording); }, [recording]);
   const pad = big ? '10px 18px' : '4px 10px';
   const fs = big ? 15 : 12;
@@ -555,7 +578,7 @@ function VoiceRecorder({ voice, onChange, big, onRecordingChange }) {
             ⏺ 停止錄音 · {elapsed.toFixed(1)}s
           </button>
         )}
-        {recording && <VolumeBars volume={volume} big={big} />}
+        {recording && <WaveformVisualizer analyserRef={analyserRef} recording={recording} big={big} />}
         {voice && !recording && (
           <button type="button" onClick={() => onChange(null)}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, opacity: 0.6 }} title="刪除錄音">🗑️</button>
