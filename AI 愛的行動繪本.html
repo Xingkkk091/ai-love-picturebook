@@ -430,20 +430,25 @@ function useVoiceRecorder(onDone) {
   const analyserRef = useRef(null);
   const volRafRef = useRef(null);
 
-  async function refreshDevices() {
+  async function refreshDevices(autoSelect) {
     try {
       const all = await navigator.mediaDevices.enumerateDevices();
       const inputs = all.filter(d => d.kind === 'audioinput');
       setDevices(inputs);
+      if (autoSelect && inputs.length > 0) {
+        // prefer real hardware mic over virtual devices
+        const real = inputs.find(d => !/virtual|steam|droidcam|voice changer|vb-audio|voicemeeter/i.test(d.label));
+        setDeviceId((real || inputs[0]).deviceId);
+      }
     } catch {}
   }
-  useEffect(() => { refreshDevices(); }, []);
+  useEffect(() => { refreshDevices(true); }, []);
 
   async function start() {
     try {
       const audioConstraint = deviceId ? { deviceId: { exact: deviceId } } : true;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint });
-      refreshDevices();
+      refreshDevices(true);
       streamRef.current = stream;
       // MediaRecorder first — before any AudioContext to avoid driver interference
       const mimes = ['audio/webm; codecs=opus', 'audio/webm', 'audio/ogg', 'audio/mp4'];
@@ -623,7 +628,6 @@ function VoiceRecorder({ voice, onChange, big, onRecordingChange }) {
       {devices.length > 1 && !recording && (
         <select value={deviceId} onChange={e => setDeviceId(e.target.value)}
           style={{ fontSize: 11, fontFamily: 'var(--mono)', padding: '3px 6px', borderRadius: 6, border: '1.5px solid var(--ink)', background: 'var(--paper-2)', color: 'var(--ink)', cursor: 'pointer', maxWidth: 280 }}>
-          <option value="">🎤 系統預設麥克風</option>
           {devices.map(d => (
             <option key={d.deviceId} value={d.deviceId}>
               {d.label || `麥克風 ${d.deviceId.slice(0, 8)}`}
