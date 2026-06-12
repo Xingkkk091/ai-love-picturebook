@@ -403,14 +403,15 @@ function useVoiceRecorder(onDone) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      // volume meter via AnalyserNode
+      // volume meter via AnalyserNode — clone stream so MediaRecorder gets a clean unshared track
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const src = ctx.createMediaStreamSource(stream);
+        const vizStream = stream.clone();
+        const src = ctx.createMediaStreamSource(vizStream);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 256;
         src.connect(analyser);
-        analyserRef.current = { analyser, ctx };
+        analyserRef.current = { analyser, ctx, vizStream };
         const buf = new Uint8Array(analyser.frequencyBinCount);
         function rafTick() {
           analyser.getByteFrequencyData(buf);
@@ -430,7 +431,7 @@ function useVoiceRecorder(onDone) {
       rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       rec.onstop = () => {
         if (volRafRef.current) { cancelAnimationFrame(volRafRef.current); volRafRef.current = null; }
-        if (analyserRef.current) { try { analyserRef.current.ctx.close(); } catch {} analyserRef.current = null; }
+        if (analyserRef.current) { try { analyserRef.current.vizStream.getTracks().forEach(t => t.stop()); } catch {} try { analyserRef.current.ctx.close(); } catch {} analyserRef.current = null; }
         setVolume(0);
         // Use rec.mimeType (actual format used) instead of requested mime — they can differ on iOS
         const actualMime = rec.mimeType || mime || 'audio/webm';
@@ -461,7 +462,7 @@ function useVoiceRecorder(onDone) {
   function stop() {
     if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop();
     if (volRafRef.current) { cancelAnimationFrame(volRafRef.current); volRafRef.current = null; }
-    if (analyserRef.current) { try { analyserRef.current.ctx.close(); } catch {} analyserRef.current = null; }
+    if (analyserRef.current) { try { analyserRef.current.vizStream.getTracks().forEach(t => t.stop()); } catch {} try { analyserRef.current.ctx.close(); } catch {} analyserRef.current = null; }
     setVolume(0);
     setRecording(false);
   }
@@ -470,7 +471,7 @@ function useVoiceRecorder(onDone) {
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     if (tickRef.current) clearInterval(tickRef.current);
     if (volRafRef.current) cancelAnimationFrame(volRafRef.current);
-    if (analyserRef.current) { try { analyserRef.current.ctx.close(); } catch {} }
+    if (analyserRef.current) { try { analyserRef.current.vizStream.getTracks().forEach(t => t.stop()); } catch {} try { analyserRef.current.ctx.close(); } catch {} }
   }, []);
   return { recording, elapsed, volume, analyserRef, start, stop };
 }
