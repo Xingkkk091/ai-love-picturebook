@@ -392,6 +392,8 @@ function useVoiceRecorder(onDone) {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [volume, setVolume] = useState(0);
+  const [devices, setDevices] = useState([]);
+  const [deviceId, setDeviceId] = useState('');
   const recRef = useRef(null);
   const streamRef = useRef(null);
   const startRef = useRef(0);
@@ -399,9 +401,20 @@ function useVoiceRecorder(onDone) {
   const analyserRef = useRef(null);
   const volRafRef = useRef(null);
 
+  async function refreshDevices() {
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const inputs = all.filter(d => d.kind === 'audioinput');
+      setDevices(inputs);
+    } catch {}
+  }
+  useEffect(() => { refreshDevices(); }, []);
+
   async function start() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioConstraint = deviceId ? { deviceId: { exact: deviceId } } : true;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint });
+      refreshDevices(); // re-enumerate after permission to get real labels
       streamRef.current = stream;
       // volume meter via AnalyserNode — clone stream so MediaRecorder gets a clean unshared track
       try {
@@ -473,7 +486,7 @@ function useVoiceRecorder(onDone) {
     if (volRafRef.current) cancelAnimationFrame(volRafRef.current);
     if (analyserRef.current) { try { analyserRef.current.vizStream.getTracks().forEach(t => t.stop()); } catch {} try { analyserRef.current.ctx.close(); } catch {} }
   }, []);
-  return { recording, elapsed, volume, analyserRef, start, stop };
+  return { recording, elapsed, volume, analyserRef, devices, deviceId, setDeviceId, start, stop };
 }
 
 // ── Speech recognition hook (for story input) ──
@@ -561,12 +574,23 @@ function WaveformVisualizer({ analyserRef, recording, big }) {
 }
 
 function VoiceRecorder({ voice, onChange, big, onRecordingChange }) {
-  const { recording, elapsed, analyserRef, start, stop } = useVoiceRecorder(onChange);
+  const { recording, elapsed, analyserRef, devices, deviceId, setDeviceId, start, stop } = useVoiceRecorder(onChange);
   React.useEffect(() => { if (onRecordingChange) onRecordingChange(recording); }, [recording]);
   const pad = big ? '10px 18px' : '4px 10px';
   const fs = big ? 15 : 12;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: big ? 12 : 6 }}>
+      {devices.length > 1 && !recording && (
+        <select value={deviceId} onChange={e => setDeviceId(e.target.value)}
+          style={{ fontSize: 11, fontFamily: 'var(--mono)', padding: '3px 6px', borderRadius: 6, border: '1.5px solid var(--ink)', background: 'var(--paper-2)', color: 'var(--ink)', cursor: 'pointer', maxWidth: 280 }}>
+          <option value="">🎤 系統預設麥克風</option>
+          {devices.map(d => (
+            <option key={d.deviceId} value={d.deviceId}>
+              {d.label || `麥克風 ${d.deviceId.slice(0, 8)}`}
+            </option>
+          ))}
+        </select>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {!recording ? (
           <button type="button" onClick={start}
